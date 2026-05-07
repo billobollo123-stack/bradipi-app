@@ -1122,6 +1122,24 @@ function selGiorno(iso){
   calGiornoSel = iso;
   renderCalendario();
   apriAgenda(iso);
+  function apriAgenda(iso){
+  var panel=document.getElementById('agenda-panel');
+  var lbl=document.getElementById('agenda-data-lbl');
+  var lista=document.getElementById('agenda-ev-list');
+  if(!panel||!lbl||!lista)return;
+  var d=new Date(iso+'T12:00:00');
+  lbl.textContent=GIORNI_S[d.getDay()]+' '+d.getDate()+' '+MESI[d.getMonth()];
+  var evG=eventiCache.filter(function(ev){return(ev.start&&(ev.start.date||ev.start.dateTime||'')).slice(0,10)===iso;});
+  if(evG.length===0){lista.innerHTML='<div style="text-align:center;color:var(--muted);font-size:13px;font-weight:700;padding:16px 0">Nessun evento 🦥</div>';}
+  else{lista.innerHTML=evG.map(function(ev){var s=ev.start&&ev.start.dateTime?fmtOra(ev.start.dateTime):'Tutto il giorno';var e2=ev.end&&ev.end.dateTime?fmtOra(ev.end.dateTime):'';return'<div class="agenda-ev-item" style="border-left-color:'+colorIdToHex(ev.colorId)+'"><div class="agenda-ev-info"><div class="agenda-ev-tit">'+esc(ev.summary||'Evento')+'</div><div class="agenda-ev-ora">'+s+(e2?' → '+e2:'')+'</div></div></div>';}).join('');}
+  panel.style.display='block';
+}
+function chiudiAgenda(){
+  var panel=document.getElementById('agenda-panel');
+  if(panel)panel.style.display='none';
+  calGiornoSel=null;
+  renderCalendario();
+}
 }
 
 // mkCell e selGiorno definiti sopra nel nuovo renderCalendario
