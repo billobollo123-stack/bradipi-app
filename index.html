@@ -66,6 +66,7 @@ body{font-family:var(--font);background:linear-gradient(160deg,var(--bg1) 0%,var
 .cal-cell-new.c-conflitto{border:2px solid #FFD700}
 .cal-dots-row{display:flex;gap:3px;align-items:center;min-height:7px}
 .cal-dot-ev{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+[style*="Comic_Sans_MS"]{font-family:"Comic Sans MS",cursive!important}
 .agenda-panel{position:fixed;left:0;right:65px;background:#16213e;border-top:2px solid var(--ale);border-radius:20px 20px 0 0;padding:16px 16px 28px;z-index:50;box-shadow:0 -10px 30px rgba(0,0,0,.5);overflow-y:auto;top:auto;bottom:0}
 .agenda-ev-item{background:var(--card);border:1px solid var(--border);border-left:4px solid var(--comune);border-radius:12px;padding:10px 12px;margin-bottom:8px;display:flex;align-items:center;gap:10px}
 .agenda-ev-info{flex:1;min-width:0}
@@ -130,7 +131,7 @@ body{font-family:var(--font);background:linear-gradient(160deg,var(--bg1) 0%,var
 <div class="page" id="page-app">
   <div id="app-content">
     <div class="app-header">
-      <div class="header-logo"><span style="font-size:22px">🦥</span><span>Famiglia Bradipi <span onclick="toggleDebug()" style="font-size:10px;opacity:.4;cursor:pointer;padding:4px">v23</span></span></div>
+      <div class="header-logo"><span style="font-size:22px">🦥</span><span>Famiglia Bradipi <span onclick="toggleDebug()" style="font-size:10px;opacity:.4;cursor:pointer;padding:4px">v24</span></span></div>
       <div class="header-badge ale" id="hdr-badge" onclick="logout()">👦 Ale</div>
     </div>
 
@@ -153,6 +154,8 @@ body{font-family:var(--font);background:linear-gradient(160deg,var(--bg1) 0%,var
       <div style="width:100%;max-width:300px">
         <div class="sez">Ultimi comandi</div>
         <div id="storico-list"><div style="text-align:center;color:var(--muted);font-size:13px;font-weight:700;padding:10px 0">nessun comando ancora 🦥</div></div>
+        <button onclick="apriModal('modal-manuale')" style="width:100%;margin-top:14px;background:rgba(255,107,107,.1);border:1px solid rgba(255,107,107,.25);border-radius:16px;padding:12px;color:#FF6B6B;font-family:var(--font);font-size:13px;font-weight:900;cursor:pointer">⚙️ Il Bradipo non ha capito? Inserisci manualmente</button>
+        <button onclick="apriLogErrori()" style="width:100%;margin-top:8px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:16px;padding:10px;color:var(--muted);font-family:var(--font);font-size:12px;font-weight:900;cursor:pointer">🐛 Log errori app</button>
       </div>
     </div>
 
@@ -429,8 +432,32 @@ body{font-family:var(--font);background:linear-gradient(160deg,var(--bg1) 0%,var
     <div id="debug-input" style="font-size:11px;color:#FFB74D;margin-bottom:8px;word-break:break-all">—</div>
     <div style="font-size:10px;color:rgba(255,255,255,.5);font-weight:900;margin-bottom:4px">RISPOSTA GROQ:</div>
     <div id="debug-output" style="font-size:11px;color:#90CAF9;word-break:break-all">—</div>
-    <div style="font-size:10px;color:rgba(255,255,255,.5);font-weight:900;margin-top:8px;margin-bottom:4px">ERRORI:</div>
+    <div style="font-size:10px;color:rgba(255,255,255,.5);font-weight:900;margin-top:8px;margin-bottom:4px">ERRORI APP:</div>
     <div id="debug-errors" style="font-size:11px;color:#FF6B6B;word-break:break-all">—</div>
+    <button onclick="esportaLog()" style="margin-top:10px;width:100%;background:rgba(255,107,107,.15);border:1px solid rgba(255,107,107,.3);border-radius:10px;padding:8px;color:#FF6B6B;font-family:var(--font);font-size:11px;font-weight:900;cursor:pointer">⬇️ Esporta log .txt</button>
+  </div>
+
+  <!-- MODAL INSERIMENTO MANUALE -->
+  <div class="modal-overlay" id="modal-manuale" onclick="chiudiModal('modal-manuale')">
+    <div class="modal-box" onclick="event.stopPropagation()">
+      <div style="font-size:16px;font-weight:900;color:#fff">⚙️ Inserimento manuale</div>
+      <div style="font-size:12px;color:var(--muted);font-weight:700">Il Bradipo non ha capito? Inserisci manualmente.</div>
+      <input id="man-testo" type="text" placeholder="Comando originale..." class="form-input"/>
+      <select id="man-tipo" onchange="aggiornaCampiManuali()" class="form-input">
+        <option value="">Dove lo metto?</option>
+        <option value="spesa">💰 Spesa</option>
+        <option value="calendario">📅 Calendario</option>
+        <option value="lista">🛒 Lista spesa</option>
+        <option value="postit">🗒️ Post-it</option>
+        <option value="todo">✅ To-do</option>
+      </select>
+      <!-- Campi dinamici -->
+      <div id="man-campi"></div>
+      <div style="display:flex;gap:10px">
+        <button class="btn-ok" onclick="salvaManuale()">Salva 🦥</button>
+        <button class="btn-x" onclick="chiudiModal('modal-manuale')">✕</button>
+      </div>
+    </div>
   </div>
 
   <nav id="nav-right">
@@ -465,6 +492,129 @@ function toggleDebug(){
   var p = document.getElementById('debug-panel');
   if(p) p.style.display = p.style.display === 'none' ? 'block' : 'none';
   aggiornaDebugToken();
+  aggiornaLogErrori();
+}
+
+function apriLogErrori(){
+  var p = document.getElementById('debug-panel');
+  if(p){ p.style.display = 'block'; aggiornaDebugToken(); aggiornaLogErrori(); }
+}
+
+function aggiornaLogErrori(){
+  var el = document.getElementById('debug-errors');
+  if(!el) return;
+  var log = JSON.parse(localStorage.getItem('bradipo_errors') || '[]');
+  if(log.length === 0){ el.textContent = 'Nessun errore 🦥'; return; }
+  el.innerHTML = log.slice(-20).reverse().map(function(e){
+    return '<div style="border-bottom:1px solid rgba(255,255,255,.05);padding:4px 0">'+
+      '<span style="color:rgba(255,255,255,.3)">'+e.ts+'</span> '+e.msg+'</div>';
+  }).join('');
+}
+
+function logErrore(msg){
+  var log = JSON.parse(localStorage.getItem('bradipo_errors') || '[]');
+  var ts = new Date().toLocaleString('it-IT');
+  log.push({ts:ts, msg:String(msg).slice(0,200)});
+  if(log.length > 100) log = log.slice(-100);
+  localStorage.setItem('bradipo_errors', JSON.stringify(log));
+}
+
+function esportaLog(){
+  var log = JSON.parse(localStorage.getItem('bradipo_errors') || '[]');
+  var txt = 'BRADIPO LOG ERRORI\n==================\n\n';
+  txt += log.map(function(e){ return '['+e.ts+'] '+e.msg; }).join('\n');
+  var a = document.createElement('a');
+  a.href = 'data:text/plain;charset=utf-8,'+encodeURIComponent(txt);
+  a.download = 'bradipo-log.txt';
+  a.click();
+}
+
+function aggiornaCampiManuali(){
+  var tipo = document.getElementById('man-tipo').value;
+  var el = document.getElementById('man-campi');
+  if(!el) return;
+  var html = '';
+  if(tipo === 'spesa'){
+    html = '<input id="man-importo" type="number" step="0.01" placeholder="Importo €" class="form-input"/>'+
+      '<select id="man-cat" class="form-input"><option value="">Categoria...</option>'+
+      '<option>Alimentari</option><option>Ristorante</option><option>Bollette</option>'+
+      '<option>Svago</option><option>Trasporto</option><option>Salute</option>'+
+      '<option>Abbigliamento</option><option>Istruzione</option><option>Risparmi</option><option>Altro</option></select>'+
+      '<input id="man-nota" type="text" placeholder="Nota" class="form-input"/>'+
+      '<input id="man-data" type="date" class="form-input"/>';
+  } else if(tipo === 'calendario'){
+    html = '<input id="man-titolo" type="text" placeholder="Titolo evento" class="form-input"/>'+
+      '<input id="man-data" type="date" class="form-input"/>'+
+      '<div style="display:flex;gap:8px"><input id="man-inizio" type="time" class="form-input" style="flex:1"/><input id="man-fine" type="time" class="form-input" style="flex:1"/></div>'+
+      '<select id="man-tipo-ev" class="form-input"><option value="comune">Comune</option><option value="privato-ale">Privato Ale</option><option value="privato-maura">Privato Maura</option></select>';
+  } else if(tipo === 'lista'){
+    html = '<input id="man-articolo" type="text" placeholder="Articolo (virgola per più articoli)" class="form-input"/>'+
+      '<input id="man-lista-nome" type="text" placeholder="Nome lista (vuoto = principale)" class="form-input"/>';
+  } else if(tipo === 'postit'){
+    html = '<textarea id="man-testo-postit" rows="3" placeholder="Testo post-it..." class="form-input" style="font-family:Caveat,cursive;font-size:20px;resize:none"></textarea>';
+  } else if(tipo === 'todo'){
+    html = '<input id="man-testo-todo" type="text" placeholder="Task..." class="form-input"/>'+
+      '<input id="man-scad-todo" type="date" class="form-input"/>';
+  }
+  el.innerHTML = html;
+  // Set data default oggi
+  var today = oggiISO();
+  var dataEl = document.getElementById('man-data');
+  if(dataEl) dataEl.value = today;
+}
+
+async function salvaManuale(){
+  var tipo = document.getElementById('man-tipo').value;
+  if(!tipo){ alert('Scegli dove inserire!'); return; }
+  try{
+    if(tipo === 'spesa'){
+      var imp = document.getElementById('man-importo') ? document.getElementById('man-importo').value : '';
+      var cat = document.getElementById('man-cat') ? document.getElementById('man-cat').value : 'Altro';
+      var nota = document.getElementById('man-nota') ? document.getElementById('man-nota').value : '';
+      var data = document.getElementById('man-data') ? document.getElementById('man-data').value : oggiISO();
+      if(!imp){ alert('Inserisci un importo!'); return; }
+      await salvaSpesaDB(parseFloat(imp), cat||'Altro', nota||cat, data||oggiISO());
+    } else if(tipo === 'calendario'){
+      var titolo = document.getElementById('man-titolo') ? document.getElementById('man-titolo').value : '';
+      var data2 = document.getElementById('man-data') ? document.getElementById('man-data').value : oggiISO();
+      var inizio = document.getElementById('man-inizio') ? document.getElementById('man-inizio').value : '';
+      var fine = document.getElementById('man-fine') ? document.getElementById('man-fine').value : '';
+      var tipoEv = document.getElementById('man-tipo-ev') ? document.getElementById('man-tipo-ev').value : 'comune';
+      if(!titolo){ alert('Inserisci un titolo!'); return; }
+      document.getElementById('ev-titolo').value = titolo;
+      document.getElementById('ev-data').value = data2;
+      document.getElementById('ev-inizio').value = inizio;
+      document.getElementById('ev-fine').value = fine;
+      document.getElementById('ev-tipo').value = tipoEv;
+      chiudiModal('modal-manuale');
+      await salvaEvento();
+      return;
+    } else if(tipo === 'lista'){
+      var art = document.getElementById('man-articolo') ? document.getElementById('man-articolo').value : '';
+      var listaN = document.getElementById('man-lista-nome') ? document.getElementById('man-lista-nome').value.trim() : '';
+      if(!art){ alert('Inserisci un articolo!'); return; }
+      var target = listaN || 'principale';
+      var nomi = art.split(',').map(function(s){ return s.trim(); }).filter(function(s){ return s; });
+      for(var i=0;i<nomi.length;i++){
+        await db.collection('liste').doc(target).collection('articoli').add({nome:nomi[i],ts:firebase.firestore.FieldValue.serverTimestamp()});
+      }
+    } else if(tipo === 'postit'){
+      var testoPit = document.getElementById('man-testo-postit') ? document.getElementById('man-testo-postit').value.trim() : '';
+      if(!testoPit){ alert('Scrivi qualcosa!'); return; }
+      var colore = currentUser === 'Ale' ? '#FFE8A3' : '#A8E6E3';
+      await db.collection('postits').add({testo:testoPit,autore:currentUser,colore:colore,ts:firebase.firestore.FieldValue.serverTimestamp()});
+    } else if(tipo === 'todo'){
+      var testoTd = document.getElementById('man-testo-todo') ? document.getElementById('man-testo-todo').value.trim() : '';
+      var scadTd = document.getElementById('man-scad-todo') ? document.getElementById('man-scad-todo').value : '';
+      if(!testoTd){ alert('Inserisci un task!'); return; }
+      await db.collection('todos').add({testo:testoTd,fatto:false,scadenza:scadTd,ts:firebase.firestore.FieldValue.serverTimestamp()});
+    }
+    chiudiModal('modal-manuale');
+    mostraBolla(rispOk());
+  }catch(e){
+    logErrore('salvaManuale: '+e.message);
+    mostraBolla('Errore 😔','#FF6B6B');
+  }
 }
 
 function aggiornaDebugToken(){
@@ -1509,7 +1659,7 @@ function renderTodo(todos){
     return '<div style="display:flex;align-items:center;gap:12px;padding:14px 16px;background:var(--card);border:1px solid var(--border);border-radius:16px;margin-bottom:10px">'+
       '<div data-tid="'+t.id+'" data-fatto="'+(fatto?'1':'0')+'" class="todo-check" style="width:28px;height:28px;border-radius:50%;border:2px solid '+(fatto?'var(--maura)':'var(--ale)')+';background:'+(fatto?'var(--maura)':'transparent')+';display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;font-size:16px">'+(fatto?'✓':'')+'</div>'+
       '<div style="flex:1;min-width:0">'+
-      '<div style="font-family:Caveat,cursive;font-size:26px;font-weight:700;color:'+(fatto?'var(--muted)':'var(--text)')+';'+(fatto?'text-decoration:line-through;':'')+'line-height:1.2">'+esc(t.testo||'')+'</div>'+
+      '<div style="font-family:Comic_Sans_MS,cursive;font-size:24px;font-weight:700;color:'+(fatto?'var(--muted)':'var(--text)')+';'+(fatto?'text-decoration:line-through;':'')+'line-height:1.2">'+esc(t.testo||'')+'</div>'+
       (scadLabel ? '<div style="margin-top:2px">'+scadLabel+'</div>' : '')+
       '</div>'+
       '<div style="display:flex;gap:6px;flex-shrink:0">'+
@@ -1626,28 +1776,27 @@ function renderArticoli(articoli){
   }
   el.innerHTML = articoli.map(function(a){
     return '<div style="display:flex;align-items:center;gap:12px;padding:14px 16px;background:var(--card);border:1px solid var(--border);border-radius:14px;margin-bottom:8px">'+
-      '<div data-aid="'+a.id+'" class="art-spunta" style="width:26px;height:26px;border-radius:50%;border:2px solid var(--ale);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">'+
+      '<div style="flex:1;font-size:17px;font-weight:700;color:var(--text)">'+esc(a.nome||'')+'</div>'+
+      '<div data-aid="'+a.id+'" class="art-spunta" style="width:30px;height:30px;border-radius:50%;border:2px solid var(--ale);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">'+
       '</div>'+
-      '<div style="flex:1;font-size:16px;font-weight:700;color:var(--text)">'+esc(a.nome||'')+'</div>'+
-      '<button data-aid="'+a.id+'" class="art-del" style="background:none;border:none;color:rgba(255,107,107,.4);font-size:18px;cursor:pointer">🗑️</button>'+
       '</div>';
   }).join('');
   el.querySelectorAll('.art-spunta').forEach(function(btn){
     btn.onclick = function(){ spuntaArticolo(this.dataset.aid); };
   });
-  el.querySelectorAll('.art-del').forEach(function(btn){
-    btn.onclick = function(){ eliminaArticolo(this.dataset.aid); };
-  });
 }
 
 async function aggiungiArticolo(){
   var input = document.getElementById('lista-input');
-  var nome = input ? input.value.trim() : '';
-  if(!nome) return;
+  var raw = input ? input.value.trim() : '';
+  if(!raw) return;
+  var nomi = raw.split(',').map(function(s){ return s.trim(); }).filter(function(s){ return s.length > 0; });
   try{
-    await db.collection('liste').doc(listaCorrente).collection('articoli').add({
-      nome:nome, ts:firebase.firestore.FieldValue.serverTimestamp()
-    });
+    for(var i=0;i<nomi.length;i++){
+      await db.collection('liste').doc(listaCorrente).collection('articoli').add({
+        nome:nomi[i], ts:firebase.firestore.FieldValue.serverTimestamp()
+      });
+    }
     if(input) input.value = '';
   }catch(e){ mostraBolla('Errore 😔','#FF6B6B'); }
 }
