@@ -130,7 +130,7 @@ body{font-family:var(--font);background:linear-gradient(160deg,var(--bg1) 0%,var
 <div class="page" id="page-app">
   <div id="app-content">
     <div class="app-header">
-      <div class="header-logo"><span style="font-size:22px">🦥</span><span>Famiglia Bradipi <span onclick="toggleDebug()" style="font-size:10px;opacity:.4;cursor:pointer;padding:4px">v22</span></span></div>
+      <div class="header-logo"><span style="font-size:22px">🦥</span><span>Famiglia Bradipi <span onclick="toggleDebug()" style="font-size:10px;opacity:.4;cursor:pointer;padding:4px">v23</span></span></div>
       <div class="header-badge ale" id="hdr-badge" onclick="logout()">👦 Ale</div>
     </div>
 
@@ -349,7 +349,28 @@ body{font-family:var(--font);background:linear-gradient(160deg,var(--bg1) 0%,var
 
     <!-- TODO -->
     <div class="tab" id="tab-todo">
-      <div class="tab-ph"><div style="font-size:48px">✅</div><div style="font-size:14px;font-weight:900;color:var(--muted)">To-do — in arrivo</div></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-shrink:0">
+        <div style="font-size:18px;font-weight:900;color:#fff">To-do ✅</div>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:14px;flex-shrink:0">
+        <input id="todo-input" type="text" placeholder="Nuovo task..." class="form-input" style="flex:1;font-family:'Caveat',cursive;font-size:20px"
+          onkeydown="if(event.key==='Enter'){aggiungiTodo();this.blur()}"/>
+        <button onclick="aggiungiTodo()" style="background:rgba(144,202,249,.15);border:1.5px solid rgba(144,202,249,.3);border-radius:14px;padding:10px 14px;color:var(--ale);font-family:var(--font);font-size:14px;font-weight:900;cursor:pointer">+</button>
+      </div>
+      <div id="todo-lista" style="flex:1;overflow-y:auto"></div>
+
+      <!-- MODAL SCADENZA -->
+      <div class="modal-overlay" id="modal-todo-scad" onclick="chiudiModal('modal-todo-scad')">
+        <div class="modal-box" onclick="event.stopPropagation()">
+          <div style="font-size:16px;font-weight:900;color:#fff">📅 Scadenza task</div>
+          <input type="hidden" id="todo-scad-id"/>
+          <input id="todo-scad-data" type="date" class="form-input"/>
+          <div style="display:flex;gap:10px">
+            <button class="btn-ok" onclick="salvaScadenza()">Salva 🦥</button>
+            <button class="btn-x" onclick="chiudiModal('modal-todo-scad')">✕</button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- MODAL SPESA -->
@@ -537,6 +558,7 @@ function switchTab(id, btn){
   if(id === 'spese') caricaSpese();
   if(id === 'postit') ascoltaPostit();
   if(id === 'lista') ascoltaListe();
+  if(id === 'todo') ascoltaTodo();
   if(id === 'calendario'){
     calMeseVal = new Date().getMonth();
     calAnnoVal = new Date().getFullYear();
@@ -651,7 +673,12 @@ async function elaboraCmd(testo){
     var labSpesa = d.nota && d.nota !== d.categoria ? d.nota+' — '+d.categoria : d.categoria||'Altro';
     addStorico('💰', (d.importo||'?')+'€ — '+labSpesa);
   } else if(r.tipo === 'lista'){
-    var artList = d.articoli || [testo];
+    // Separa articoli per virgola se Groq non li ha già separati
+    var artRaw = d.articoli && d.articoli.length > 0 ? d.articoli : [testo];
+    var artList = [];
+    artRaw.forEach(function(a){
+      a.split(',').forEach(function(p){ var t=p.trim(); if(t) artList.push(t); });
+    });
     var nomeListaTarget = d.lista || 'principale';
     for(var ai=0; ai<artList.length; ai++){
       await db.collection('liste').doc(nomeListaTarget).collection('articoli').add({
@@ -666,9 +693,11 @@ async function elaboraCmd(testo){
     mostraBolla(rispOk());
     addStorico('🗒️', 'Post-it salvato');
   } else if(r.tipo === 'todo'){
-    await db.collection('todos').add({testo:d.testo||testo,fatto:false,autore:currentUser,ts:firebase.firestore.FieldValue.serverTimestamp()});
+    var testoTodo = d.testo || testo;
+    var scadTodo = d.data || '';
+    await db.collection('todos').add({testo:testoTodo,fatto:false,scadenza:scadTodo,ts:firebase.firestore.FieldValue.serverTimestamp()});
     mostraBolla(rispOk());
-    addStorico('✅', d.testo||testo);
+    addStorico('✅', testoTodo);
   } else if(r.tipo === 'calendario'){
     var titoloEv = d.titolo || testo.split(' ').slice(0,3).join(' ');
     titoloEv = titoloEv.charAt(0).toUpperCase() + titoloEv.slice(1);
@@ -1432,7 +1461,6 @@ async function aggiornaEvento(){
 }
 
 async function elimEv(id){
-  if(!confirm('Elimino questo evento?')) return;
   try{
     var token = await getToken();
     if(!token) return;
@@ -1443,6 +1471,98 @@ async function elimEv(id){
     caricaEventi();
     mostraBolla(rispOk());
   }catch(e){ mostraBolla('Errore eliminazione 😔','#FF6B6B'); }
+}
+
+// ============================================================
+// TO-DO
+// ============================================================
+var todoListener = null;
+
+function ascoltaTodo(){
+  if(todoListener) return;
+  todoListener = db.collection('todos').orderBy('ts','asc').onSnapshot(function(snap){
+    var todos = snap.docs.map(function(d){ return Object.assign({id:d.id},d.data()); });
+    renderTodo(todos);
+  });
+}
+
+function renderTodo(todos){
+  var el = document.getElementById('todo-lista');
+  if(!el) return;
+  if(todos.length === 0){
+    el.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:16px;font-weight:700;padding:30px 0">Nessun task 🦥</div>';
+    return;
+  }
+  el.innerHTML = todos.map(function(t){
+    var fatto = t.fatto || false;
+    var scad = t.scadenza || '';
+    var scadLabel = '';
+    if(scad){
+      var ds = new Date(scad+'T12:00:00');
+      var oggi = new Date(); oggi.setHours(0,0,0,0);
+      var diff = Math.round((ds-oggi)/(1000*60*60*24));
+      var col = diff < 0 ? '#FF6B6B' : diff === 0 ? '#FFB74D' : 'var(--muted)';
+      scadLabel = '<span style="font-size:11px;font-weight:900;color:'+col+'">'+
+        (diff < 0 ? '⚠️ scaduto' : diff === 0 ? '⏰ oggi' : '📅 '+ds.getDate()+'/'+(ds.getMonth()+1))+
+        '</span>';
+    }
+    return '<div style="display:flex;align-items:center;gap:12px;padding:14px 16px;background:var(--card);border:1px solid var(--border);border-radius:16px;margin-bottom:10px">'+
+      '<div data-tid="'+t.id+'" data-fatto="'+(fatto?'1':'0')+'" class="todo-check" style="width:28px;height:28px;border-radius:50%;border:2px solid '+(fatto?'var(--maura)':'var(--ale)')+';background:'+(fatto?'var(--maura)':'transparent')+';display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;font-size:16px">'+(fatto?'✓':'')+'</div>'+
+      '<div style="flex:1;min-width:0">'+
+      '<div style="font-family:Caveat,cursive;font-size:26px;font-weight:700;color:'+(fatto?'var(--muted)':'var(--text)')+';'+(fatto?'text-decoration:line-through;':'')+'line-height:1.2">'+esc(t.testo||'')+'</div>'+
+      (scadLabel ? '<div style="margin-top:2px">'+scadLabel+'</div>' : '')+
+      '</div>'+
+      '<div style="display:flex;gap:6px;flex-shrink:0">'+
+      '<button data-tid="'+t.id+'" data-scad="'+scad+'" class="todo-edit" style="background:none;border:none;font-size:16px;cursor:pointer;opacity:.5">✏️</button>'+
+      '<button data-tid="'+t.id+'" class="todo-del" style="background:none;border:none;font-size:16px;cursor:pointer;opacity:.4;color:#FF6B6B">🗑️</button>'+
+      '</div></div>';
+  }).join('');
+
+  // Listener check
+  el.querySelectorAll('.todo-check').forEach(function(btn){
+    btn.onclick = function(){
+      var fatto = this.dataset.fatto === '1';
+      db.collection('todos').doc(this.dataset.tid).update({fatto: !fatto});
+    };
+  });
+  // Listener edit scadenza
+  el.querySelectorAll('.todo-edit').forEach(function(btn){
+    btn.onclick = function(){
+      document.getElementById('todo-scad-id').value = this.dataset.tid;
+      document.getElementById('todo-scad-data').value = this.dataset.scad || '';
+      apriModal('modal-todo-scad');
+    };
+  });
+  // Listener elimina
+  el.querySelectorAll('.todo-del').forEach(function(btn){
+    btn.onclick = function(){
+      if(!confirm('Elimino questo task?')) return;
+      db.collection('todos').doc(this.dataset.tid).delete();
+    };
+  });
+}
+
+async function aggiungiTodo(){
+  var input = document.getElementById('todo-input');
+  var testo = input ? input.value.trim() : '';
+  if(!testo) return;
+  try{
+    await db.collection('todos').add({
+      testo:testo, fatto:false, scadenza:'',
+      ts:firebase.firestore.FieldValue.serverTimestamp()
+    });
+    if(input) input.value = '';
+  }catch(e){ mostraBolla('Errore 😔','#FF6B6B'); }
+}
+
+async function salvaScadenza(){
+  var id = document.getElementById('todo-scad-id').value;
+  var data = document.getElementById('todo-scad-data').value;
+  try{
+    await db.collection('todos').doc(id).update({scadenza: data});
+    chiudiModal('modal-todo-scad');
+    mostraBolla(rispOk());
+  }catch(e){ mostraBolla('Errore 😔','#FF6B6B'); }
 }
 
 // ============================================================
