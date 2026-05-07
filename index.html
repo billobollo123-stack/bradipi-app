@@ -130,7 +130,7 @@ body{font-family:var(--font);background:linear-gradient(160deg,var(--bg1) 0%,var
 <div class="page" id="page-app">
   <div id="app-content">
     <div class="app-header">
-      <div class="header-logo"><span style="font-size:22px">🦥</span><span>Famiglia Bradipi <span onclick="toggleDebug()" style="font-size:10px;opacity:.4;cursor:pointer;padding:4px">v21</span></span></div>
+      <div class="header-logo"><span style="font-size:22px">🦥</span><span>Famiglia Bradipi <span onclick="toggleDebug()" style="font-size:10px;opacity:.4;cursor:pointer;padding:4px">v22</span></span></div>
       <div class="header-badge ale" id="hdr-badge" onclick="logout()">👦 Ale</div>
     </div>
 
@@ -303,7 +303,36 @@ body{font-family:var(--font);background:linear-gradient(160deg,var(--bg1) 0%,var
 
     <!-- LISTA -->
     <div class="tab" id="tab-lista">
-      <div class="tab-ph"><div style="font-size:48px">🛒</div><div style="font-size:14px;font-weight:900;color:var(--muted)">Lista — in arrivo</div></div>
+      <!-- HEADER -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-shrink:0">
+        <div style="font-size:18px;font-weight:900;color:#fff">Lista 🛒</div>
+        <button onclick="apriModal('modal-nuova-lista')" style="background:rgba(144,202,249,.15);border:1.5px solid rgba(144,202,249,.3);border-radius:20px;padding:10px 16px;color:var(--ale);font-family:var(--font);font-size:13px;font-weight:900;cursor:pointer">+ Lista</button>
+      </div>
+      <!-- TABS LISTE -->
+      <div id="lista-tabs" style="display:flex;gap:8px;overflow-x:auto;margin-bottom:16px;padding-bottom:4px;flex-shrink:0"></div>
+      <!-- ARTICOLI -->
+      <div style="display:flex;gap:8px;margin-bottom:12px;flex-shrink:0">
+        <input id="lista-input" type="text" placeholder="Aggiungi articolo..." class="form-input" style="flex:1"
+          onkeydown="if(event.key==='Enter'){aggiungiArticolo();this.blur()}"/>
+        <button onclick="aggiungiArticolo()" style="background:rgba(144,202,249,.15);border:1.5px solid rgba(144,202,249,.3);border-radius:14px;padding:10px 14px;color:var(--ale);font-family:var(--font);font-size:14px;font-weight:900;cursor:pointer">+</button>
+      </div>
+      <div id="lista-articoli" style="flex:1;overflow-y:auto"></div>
+      <!-- FOOTER -->
+      <div style="display:flex;gap:8px;margin-top:10px;flex-shrink:0">
+        <button onclick="eliminaLista()" style="background:rgba(255,107,107,.12);border:1px solid rgba(255,107,107,.3);border-radius:14px;padding:10px;color:#FF6B6B;font-family:var(--font);font-size:12px;font-weight:900;cursor:pointer;flex:1">🗑️ Elimina lista</button>
+      </div>
+
+      <!-- MODAL NUOVA LISTA -->
+      <div class="modal-overlay" id="modal-nuova-lista" onclick="chiudiModal('modal-nuova-lista')">
+        <div class="modal-box" onclick="event.stopPropagation()">
+          <div style="font-size:16px;font-weight:900;color:#fff">📋 Nuova lista</div>
+          <input id="nuova-lista-nome" type="text" placeholder="Nome lista (es. Cena, Settimana...)" class="form-input"/>
+          <div style="display:flex;gap:10px">
+            <button class="btn-ok" onclick="creaLista()">Crea 🦥</button>
+            <button class="btn-x" onclick="chiudiModal('modal-nuova-lista')">✕</button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- POST-IT -->
@@ -507,6 +536,7 @@ function switchTab(id, btn){
   if(btn) btn.classList.add('active');
   if(id === 'spese') caricaSpese();
   if(id === 'postit') ascoltaPostit();
+  if(id === 'lista') ascoltaListe();
   if(id === 'calendario'){
     calMeseVal = new Date().getMonth();
     calAnnoVal = new Date().getFullYear();
@@ -569,7 +599,7 @@ function buildPrompt(){
     'Negozi: Pewex/Paolo=Alimentari, pizzeria/trattoria/pub/osteria=Ristorante',
     'Fasce orarie (usa SOLO se non c\'e un orario esplicito): colazione=07-09, mattina=08-13, pranzo=12-14, pomeriggio=15-19, cena=19-22, sera=19-23, notte=23-05.',
     'PRIORITA ORARIO: se nel testo c\'e un orario esplicito (es. alle 23:00) usa SEMPRE quello, ignora la fascia.',
-    'Schema risposta: {"tipo":"spesa|calendario|lista|postit|todo|sconosciuto","dati":{"importo":0,"categoria":"","nota":"","data":"YYYY-MM-DD","titolo":"","oraInizio":"HH:MM","oraFine":"HH:MM","tipo_evento":"comune","articoli":[],"testo":""}}'
+    'Schema risposta: {"tipo":"spesa|calendario|lista|postit|todo|sconosciuto","dati":{"importo":0,"categoria":"","nota":"","data":"YYYY-MM-DD","titolo":"","oraInizio":"HH:MM","oraFine":"HH:MM","tipo_evento":"comune","articoli":[],"lista":"principale","testo":""}}'
   ].join('\n');
   return prompt;
 }
@@ -621,10 +651,15 @@ async function elaboraCmd(testo){
     var labSpesa = d.nota && d.nota !== d.categoria ? d.nota+' — '+d.categoria : d.categoria||'Altro';
     addStorico('💰', (d.importo||'?')+'€ — '+labSpesa);
   } else if(r.tipo === 'lista'){
-    const art = d.articoli || [testo];
-    for(const a of art) await db.collection('lista').add({nome:a,autore:currentUser,ts:firebase.firestore.FieldValue.serverTimestamp()});
+    var artList = d.articoli || [testo];
+    var nomeListaTarget = d.lista || 'principale';
+    for(var ai=0; ai<artList.length; ai++){
+      await db.collection('liste').doc(nomeListaTarget).collection('articoli').add({
+        nome:artList[ai], ts:firebase.firestore.FieldValue.serverTimestamp()
+      });
+    }
     mostraBolla(rispOk());
-    addStorico('🛒', art.join(', '));
+    addStorico('🛒', artList.join(', '));
   } else if(r.tipo === 'postit'){
     const colore = currentUser === 'Ale' ? '#FFE8A3' : '#A8E6E3';
     await db.collection('postits').add({testo:d.testo||testo,autore:currentUser,colore,ts:firebase.firestore.FieldValue.serverTimestamp()});
@@ -1174,28 +1209,38 @@ function selGiorno(iso){
           '<div class="agenda-ev-info">'+
           '<div class="agenda-ev-tit">'+esc(ev.summary||'Evento')+'</div>'+
           '<div class="agenda-ev-ora">'+s+(e2?' → '+e2:'')+'</div></div>'+
-          '<span style="font-size:16px;flex-shrink:0">✏️</span></div>';
+          '<div style="display:flex;gap:6px;flex-shrink:0">'+
+          '<span class="ag-edit-btn" style="font-size:16px;cursor:pointer">✏️</span>'+
+          '<span class="ag-del-btn" style="font-size:16px;cursor:pointer">🗑️</span>'+
+          '</div></div>';
       }).join('');
       // Aggiungi listener modifica
       lista.querySelectorAll('.agenda-ev-item').forEach(function(div){
-        div.onclick = function(){
-          var id = this.dataset.eid;
-          var tit = this.dataset.etit;
-          var start = this.dataset.estart;
-          var end2 = this.dataset.eend;
-          document.getElementById('mod-ev-id').value = id;
-          document.getElementById('mod-ev-titolo').value = tit;
+        var editBtn = div.querySelector('.ag-edit-btn');
+        if(editBtn) editBtn.onclick = function(e){
+          e.stopPropagation();
+          var id=div.dataset.eid; var tit=div.dataset.etit;
+          var start=div.dataset.estart; var end2=div.dataset.eend;
+          document.getElementById('mod-ev-id').value=id;
+          document.getElementById('mod-ev-titolo').value=tit;
           if(start){
-            var dd = new Date(start);
-            document.getElementById('mod-ev-data').value = dd.toISOString().split('T')[0];
-            if(start.indexOf('T')>-1) document.getElementById('mod-ev-inizio').value = dd.toTimeString().slice(0,5);
+            var dd=new Date(start);
+            document.getElementById('mod-ev-data').value=dd.toISOString().split('T')[0];
+            if(start.indexOf('T')>-1) document.getElementById('mod-ev-inizio').value=dd.toTimeString().slice(0,5);
           }
-          if(end2 && end2.indexOf('T')>-1){
-            var de = new Date(end2);
-            document.getElementById('mod-ev-fine').value = de.toTimeString().slice(0,5);
+          if(end2&&end2.indexOf('T')>-1){
+            var de=new Date(end2);
+            document.getElementById('mod-ev-fine').value=de.toTimeString().slice(0,5);
           }
-          panel.style.display = 'none';
+          panel.style.display='none';
           apriModal('modal-mod-ev');
+        };
+        var delBtn = div.querySelector('.ag-del-btn');
+        if(delBtn) delBtn.onclick = function(e){
+          e.stopPropagation();
+          if(!confirm('Elimino questo evento?')) return;
+          elimEv(div.dataset.eid);
+          panel.style.display='none';
         };
       });
     }
@@ -1398,6 +1443,138 @@ async function elimEv(id){
     caricaEventi();
     mostraBolla(rispOk());
   }catch(e){ mostraBolla('Errore eliminazione 😔','#FF6B6B'); }
+}
+
+// ============================================================
+// LISTA SPESA
+// ============================================================
+var listaCorrente = 'principale';
+var listeListener = null;
+var articoliListener = null;
+
+function ascoltaListe(){
+  if(listeListener) return;
+  listeListener = db.collection('liste').orderBy('ts','asc').onSnapshot(function(snap){
+    var liste = snap.docs.map(function(d){ return Object.assign({id:d.id},d.data()); });
+    // Assicura lista principale
+    if(!liste.find(function(l){ return l.nome==='principale'; })){
+      db.collection('liste').add({nome:'principale',ts:firebase.firestore.FieldValue.serverTimestamp()});
+      return;
+    }
+    renderListaTabs(liste);
+    ascoltaArticoli(listaCorrente);
+  });
+}
+
+function renderListaTabs(liste){
+  var el = document.getElementById('lista-tabs');
+  if(!el) return;
+  el.innerHTML = liste.map(function(l){
+    var attiva = l.nome === listaCorrente;
+    return '<div onclick="switchLista(&quot;'+l.nome+'&quot;)" style="flex-shrink:0;padding:8px 16px;border-radius:20px;font-size:13px;font-weight:900;cursor:pointer;'+
+      (attiva ? 'background:var(--ale);color:#1a1a2e;' : 'background:var(--card);border:1px solid var(--border);color:var(--muted);')+
+      '">'+esc(l.nome==='principale'?'🛒 Principale':l.nome)+'</div>';
+  }).join('');
+}
+
+function switchLista(nome){
+  listaCorrente = nome;
+  if(articoliListener){ articoliListener(); articoliListener=null; }
+  // Re-render tabs e articoli
+  db.collection('liste').orderBy('ts','asc').get().then(function(snap){
+    var liste = snap.docs.map(function(d){ return Object.assign({id:d.id},d.data()); });
+    renderListaTabs(liste);
+    ascoltaArticoli(nome);
+  });
+}
+
+function ascoltaArticoli(nomeLista){
+  if(articoliListener){ articoliListener(); articoliListener=null; }
+  articoliListener = db.collection('liste').doc(nomeLista).collection('articoli')
+    .orderBy('ts','asc').onSnapshot(function(snap){
+      var articoli = snap.docs.map(function(d){ return Object.assign({id:d.id},d.data()); });
+      renderArticoli(articoli);
+    });
+}
+
+function renderArticoli(articoli){
+  var el = document.getElementById('lista-articoli');
+  if(!el) return;
+  if(articoli.length === 0){
+    el.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:14px;font-weight:700;padding:30px 0">Lista vuota 🦥</div>';
+    return;
+  }
+  el.innerHTML = articoli.map(function(a){
+    return '<div style="display:flex;align-items:center;gap:12px;padding:14px 16px;background:var(--card);border:1px solid var(--border);border-radius:14px;margin-bottom:8px">'+
+      '<div data-aid="'+a.id+'" class="art-spunta" style="width:26px;height:26px;border-radius:50%;border:2px solid var(--ale);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">'+
+      '</div>'+
+      '<div style="flex:1;font-size:16px;font-weight:700;color:var(--text)">'+esc(a.nome||'')+'</div>'+
+      '<button data-aid="'+a.id+'" class="art-del" style="background:none;border:none;color:rgba(255,107,107,.4);font-size:18px;cursor:pointer">🗑️</button>'+
+      '</div>';
+  }).join('');
+  el.querySelectorAll('.art-spunta').forEach(function(btn){
+    btn.onclick = function(){ spuntaArticolo(this.dataset.aid); };
+  });
+  el.querySelectorAll('.art-del').forEach(function(btn){
+    btn.onclick = function(){ eliminaArticolo(this.dataset.aid); };
+  });
+}
+
+async function aggiungiArticolo(){
+  var input = document.getElementById('lista-input');
+  var nome = input ? input.value.trim() : '';
+  if(!nome) return;
+  try{
+    await db.collection('liste').doc(listaCorrente).collection('articoli').add({
+      nome:nome, ts:firebase.firestore.FieldValue.serverTimestamp()
+    });
+    if(input) input.value = '';
+  }catch(e){ mostraBolla('Errore 😔','#FF6B6B'); }
+}
+
+async function spuntaArticolo(id){
+  try{
+    await db.collection('liste').doc(listaCorrente).collection('articoli').doc(id).delete();
+  }catch(e){}
+}
+
+async function eliminaArticolo(id){
+  try{
+    await db.collection('liste').doc(listaCorrente).collection('articoli').doc(id).delete();
+  }catch(e){}
+}
+
+async function creaLista(){
+  var nome = document.getElementById('nuova-lista-nome').value.trim();
+  if(!nome){ alert('Inserisci un nome!'); return; }
+  try{
+    await db.collection('liste').doc(nome).set({nome:nome,ts:firebase.firestore.FieldValue.serverTimestamp()});
+    chiudiModal('modal-nuova-lista');
+    document.getElementById('nuova-lista-nome').value = '';
+    switchLista(nome);
+  }catch(e){ mostraBolla('Errore 😔','#FF6B6B'); }
+}
+
+async function eliminaLista(){
+  if(listaCorrente === 'principale'){
+    if(!confirm('Vuoi svuotare la lista principale?')){return;}
+    // Svuota articoli
+    var snap = await db.collection('liste').doc('principale').collection('articoli').get();
+    var batch = db.batch();
+    snap.docs.forEach(function(d){ batch.delete(d.ref); });
+    await batch.commit();
+    mostraBolla(rispOk());
+  } else {
+    if(!confirm('Elimino la lista "'+listaCorrente+'"?')) return;
+    // Elimina articoli e lista
+    var snap = await db.collection('liste').doc(listaCorrente).collection('articoli').get();
+    var batch = db.batch();
+    snap.docs.forEach(function(d){ batch.delete(d.ref); });
+    batch.delete(db.collection('liste').doc(listaCorrente));
+    await batch.commit();
+    listaCorrente = 'principale';
+    mostraBolla(rispOk());
+  }
 }
 
 // AVVIO
