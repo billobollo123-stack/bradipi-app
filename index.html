@@ -130,7 +130,7 @@ body{font-family:var(--font);background:linear-gradient(160deg,var(--bg1) 0%,var
 <div class="page" id="page-app">
   <div id="app-content">
     <div class="app-header">
-      <div class="header-logo"><span style="font-size:22px">🦥</span><span>Famiglia Bradipi <span onclick="toggleDebug()" style="font-size:10px;opacity:.4;cursor:pointer;padding:4px">v19</span></span></div>
+      <div class="header-logo"><span style="font-size:22px">🦥</span><span>Famiglia Bradipi <span onclick="toggleDebug()" style="font-size:10px;opacity:.4;cursor:pointer;padding:4px">v20</span></span></div>
       <div class="header-badge ale" id="hdr-badge" onclick="logout()">👦 Ale</div>
     </div>
 
@@ -1145,18 +1145,69 @@ function mkCell(n, altro, isOggi, evs, isDom, isSel, iso){
 function selGiorno(iso){
   calGiornoSel = iso;
   renderCalendario();
-  apriAgenda(iso);
-  var panel=document.getElementById('agenda-panel');
-  var lbl=document.getElementById('agenda-data-lbl');
-  var lista=document.getElementById('agenda-ev-list');
-  if(!panel||!lbl||!lista)return;
-  var d=new Date(iso+'T12:00:00');
-  lbl.textContent=GIORNI_S[d.getDay()]+' '+d.getDate()+' '+MESI[d.getMonth()];
-  var evG=eventiCache.filter(function(ev){return(ev.start&&(ev.start.date||ev.start.dateTime||'')).slice(0,10)===iso;});
-  evG.sort(function(a,b){var as=a.start&&(a.start.dateTime||a.start.date)||'';var bs=b.start&&(b.start.dateTime||b.start.date)||'';return as<bs?-1:as>bs?1:0;});
-  if(evG.length===0){lista.innerHTML='<div style="text-align:center;color:var(--muted);font-size:13px;font-weight:700;padding:16px 0">Nessun evento 🦥</div>';}
-  else{lista.innerHTML=evG.map(function(ev){var s=ev.start&&ev.start.dateTime?fmtOra(ev.start.dateTime):'Tutto il giorno';var e2=ev.end&&ev.end.dateTime?fmtOra(ev.end.dateTime):'';return'<div class="agenda-ev-item" style="border-left-color:'+colorIdToHex(ev.colorId)+'"><div class="agenda-ev-info"><div class="agenda-ev-tit">'+esc(ev.summary||'Evento')+'</div><div class="agenda-ev-ora">'+s+(e2?' → '+e2:'')+'</div></div></div>';}).join('');}
-  panel.style.display='block';
+  // Agenda inline
+  var panel = document.getElementById('agenda-panel');
+  var lbl = document.getElementById('agenda-data-lbl');
+  var lista = document.getElementById('agenda-ev-list');
+  if(!panel) return;
+  var d = new Date(iso+'T12:00:00');
+  if(lbl) lbl.textContent = GIORNI_S[d.getDay()]+' '+d.getDate()+' '+MESI[d.getMonth()];
+  var evG = eventiCache.filter(function(ev){
+    return (ev.start&&(ev.start.date||ev.start.dateTime||'')).slice(0,10) === iso;
+  });
+  evG.sort(function(a,b){
+    var as = a.start&&(a.start.dateTime||a.start.date)||'';
+    var bs = b.start&&(b.start.dateTime||b.start.date)||'';
+    return as < bs ? -1 : as > bs ? 1 : 0;
+  });
+  if(lista){
+    if(evG.length === 0){
+      lista.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:13px;font-weight:700;padding:16px 0">Nessun evento 🦥</div>';
+    } else {
+      lista.innerHTML = evG.map(function(ev){
+        var s = ev.start&&ev.start.dateTime ? fmtOra(ev.start.dateTime) : 'Tutto il giorno';
+        var e2 = ev.end&&ev.end.dateTime ? fmtOra(ev.end.dateTime) : '';
+        var startStr = (ev.start&&(ev.start.dateTime||ev.start.date))||'';
+        var endStr = (ev.end&&(ev.end.dateTime||ev.end.date))||'';
+        return '<div class="agenda-ev-item" style="border-left-color:'+colorIdToHex(ev.colorId)+';cursor:pointer" '+
+          'data-eid="'+ev.id+'" data-etit="'+esc(ev.summary||'')+'" data-estart="'+startStr+'" data-eend="'+endStr+'" class2="ag-tap">'+
+          '<div class="agenda-ev-info">'+
+          '<div class="agenda-ev-tit">'+esc(ev.summary||'Evento')+'</div>'+
+          '<div class="agenda-ev-ora">'+s+(e2?' → '+e2:'')+'</div></div>'+
+          '<span style="font-size:16px;flex-shrink:0">✏️</span></div>';
+      }).join('');
+      // Aggiungi listener modifica
+      lista.querySelectorAll('.agenda-ev-item').forEach(function(div){
+        div.onclick = function(){
+          var id = this.dataset.eid;
+          var tit = this.dataset.etit;
+          var start = this.dataset.estart;
+          var end2 = this.dataset.eend;
+          document.getElementById('mod-ev-id').value = id;
+          document.getElementById('mod-ev-titolo').value = tit;
+          if(start){
+            var dd = new Date(start);
+            document.getElementById('mod-ev-data').value = dd.toISOString().split('T')[0];
+            if(start.indexOf('T')>-1) document.getElementById('mod-ev-inizio').value = dd.toTimeString().slice(0,5);
+          }
+          if(end2 && end2.indexOf('T')>-1){
+            var de = new Date(end2);
+            document.getElementById('mod-ev-fine').value = de.toTimeString().slice(0,5);
+          }
+          panel.style.display = 'none';
+          apriModal('modal-mod-ev');
+        };
+      });
+    }
+  }
+  panel.style.display = 'block';
+}
+
+function chiudiAgenda(){
+  var panel = document.getElementById('agenda-panel');
+  if(panel) panel.style.display = 'none';
+  calGiornoSel = null;
+  renderCalendario();
 }
 
 // mkCell e selGiorno definiti sopra nel nuovo renderCalendario
