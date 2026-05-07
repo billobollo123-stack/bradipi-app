@@ -130,7 +130,7 @@ body{font-family:var(--font);background:linear-gradient(160deg,var(--bg1) 0%,var
 <div class="page" id="page-app">
   <div id="app-content">
     <div class="app-header">
-      <div class="header-logo"><span style="font-size:22px">🦥</span><span>Famiglia Bradipi <span onclick="toggleDebug()" style="font-size:10px;opacity:.4;cursor:pointer;padding:4px">v17</span></span></div>
+      <div class="header-logo"><span style="font-size:22px">🦥</span><span>Famiglia Bradipi <span onclick="toggleDebug()" style="font-size:10px;opacity:.4;cursor:pointer;padding:4px">v18b</span></span></div>
       <div class="header-badge ale" id="hdr-badge" onclick="logout()">👦 Ale</div>
     </div>
 
@@ -1071,6 +1071,57 @@ function renderCalendario(){
   for(var j = 1; j <= fin; j++) celle.appendChild(mkCell(j, true, false, [], false, false, null));
   renderProssimi();
   if(calGiornoSel) renderGiornoSel(calGiornoSel);
+}
+
+function mkCell(n, altro, isOggi, evs, isDom, isSel, iso){
+  var c = document.createElement('div');
+  c.className = 'cal-cell-new' +
+    (altro?' c-altro':'') +
+    (isOggi&&!isSel?' c-oggi':'') +
+    (isSel?' c-sel':'') +
+    (evs&&evs.length>0?' c-ev':'') +
+    (isDom&&!isOggi&&!isSel?' c-dom':'');
+  var haConflitto = false;
+  if(evs && evs.length > 1){
+    for(var a=0;a<evs.length&&!haConflitto;a++){
+      for(var b2=a+1;b2<evs.length&&!haConflitto;b2++){
+        var as=evs[a].start&&(evs[a].start.dateTime||evs[a].start.date);
+        var ae=evs[a].end&&(evs[a].end.dateTime||evs[a].end.date);
+        var bs2=evs[b2].start&&(evs[b2].start.dateTime||evs[b2].start.date);
+        var be2=evs[b2].end&&(evs[b2].end.dateTime||evs[b2].end.date);
+        if(as&&bs2){
+          var dAs=new Date(as);var dAe=ae?new Date(ae):new Date(dAs.getTime()+3600000);
+          var dBs=new Date(bs2);var dBe=be2?new Date(be2):new Date(dBs.getTime()+3600000);
+          if(dAs<dBe&&dAe>dBs) haConflitto=true;
+        }
+      }
+    }
+  }
+  if(haConflitto) c.classList.add('c-conflitto');
+  c.innerHTML = '<span class="cal-num">'+n+'</span>';
+  if(evs && evs.length > 0 && !isSel){
+    var dotsDiv = document.createElement('div');
+    dotsDiv.className = 'cal-dots-row';
+    var tipi = {};
+    evs.forEach(function(ev){ tipi[ev.colorId||'6'] = true; });
+    Object.keys(tipi).slice(0,4).forEach(function(cid){
+      var dot = document.createElement('div');
+      dot.className = 'cal-dot-ev';
+      dot.style.background = colorIdToHex(cid);
+      dotsDiv.appendChild(dot);
+    });
+    c.appendChild(dotsDiv);
+  }
+  if(!altro && iso){
+    c.onclick = (function(isoCapt){ return function(){ selGiorno(isoCapt); }; })(iso);
+  }
+  return c;
+}
+
+function selGiorno(iso){
+  calGiornoSel = iso;
+  renderCalendario();
+  apriAgenda(iso);
 }
 
 // mkCell e selGiorno definiti sopra nel nuovo renderCalendario
