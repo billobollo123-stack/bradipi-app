@@ -130,7 +130,7 @@ body{font-family:var(--font);background:linear-gradient(160deg,var(--bg1) 0%,var
 <div class="page" id="page-app">
   <div id="app-content">
     <div class="app-header">
-      <div class="header-logo"><span style="font-size:22px">🦥</span><span>Famiglia Bradipi <span onclick="toggleDebug()" style="font-size:10px;opacity:.4;cursor:pointer;padding:4px">v15</span></span></div>
+      <div class="header-logo"><span style="font-size:22px">🦥</span><span>Famiglia Bradipi <span onclick="toggleDebug()" style="font-size:10px;opacity:.4;cursor:pointer;padding:4px">v16</span></span></div>
       <div class="header-badge ale" id="hdr-badge" onclick="logout()">👦 Ale</div>
     </div>
 
@@ -232,12 +232,11 @@ body{font-family:var(--font);background:linear-gradient(160deg,var(--bg1) 0%,var
           <div style="text-align:center;font-size:11px;font-weight:900;color:var(--muted);padding:3px 0">S</div>
           <div style="text-align:center;font-size:11px;font-weight:900;color:rgba(255,107,107,.6);padding:3px 0">D</div>
         </div>
-        <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px" id="cal-celle"></div>
+        <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;padding:0 2px" id="cal-celle"></div>
       </div>
 
-      <!-- PROSSIMI -->
-      <div style="font-size:10px;font-weight:900;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px">Prossimi eventi</div>
-      <div id="cal-prossimi"></div>
+      <!-- PROSSIMI nascosti, usati internamente -->
+      <div id="cal-prossimi" style="display:none"></div>
 
       <!-- PANNELLO AGENDA -->
       <div id="agenda-panel" class="agenda-panel" style="display:none">
@@ -505,7 +504,13 @@ function switchTab(id, btn){
   if(btn) btn.classList.add('active');
   if(id === 'spese') caricaSpese();
   if(id === 'postit') ascoltaPostit();
-  if(id === 'calendario'){ eventiCache = []; caricaEventi(); }
+  if(id === 'calendario'){
+    calMeseVal = new Date().getMonth();
+    calAnnoVal = new Date().getFullYear();
+    eventiCache = [];
+    caricaEventi();
+    chiudiAgenda();
+  }
 }
 
 function apriModal(id){ document.getElementById(id).classList.add('show'); }
@@ -554,8 +559,9 @@ function buildPrompt(){
   var prompt = [
     'Sei il Bradipo, assistente per Ale e Maura. Rispondi SOLO con JSON valido senza testo extra.',
     'Data oggi: ' + oggi_str + ' Anno: ' + d.getFullYear(),
-    'REGOLA SPESA: contiene SEMPRE euro o il simbolo euro. Senza euro/simbolo euro = NON e una spesa.',
+    'REGOLA SPESA: contiene SEMPRE euro o il simbolo €. Senza euro/€ = NON e una spesa.',
     'REGOLA CALENDARIO: data o giorno senza importo = evento calendario.',
+    'REGOLA PRIVATO: se nel testo c\u0027è "Ale" o "Alessandro" = tipo_evento privato-ale. Se c\u0027è "Maura" = privato-maura. Se ci sono entrambi o nessuno = comune.',
     'Categorie spese: Alimentari, Ristorante, Bollette, Svago, Trasporto, Salute, Abbigliamento, Istruzione, Risparmi, Altro',
     'Negozi: Pewex/Paolo=Alimentari, pizzeria/trattoria/pub/osteria=Ristorante',
     'Fasce: mattina=08-13, pranzo=12-15, pomeriggio=15-19, sera=19-23, notte=23-05',
@@ -643,6 +649,7 @@ async function elaboraCmd(testo){
         if(testoLow.includes('turno') || /[A-Z][0-9][A-Z]/.test(testo)) colorId = '11';
         else if(d.tipo_evento === 'privato-ale') colorId = '1';
         else if(d.tipo_evento === 'privato-maura') colorId = '2';
+        else if(d.tipo_evento === 'comune') colorId = '6';
         await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events',{
           method:'POST',
           headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},
