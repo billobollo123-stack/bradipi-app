@@ -66,7 +66,7 @@ body{font-family:var(--font);background:linear-gradient(160deg,var(--bg1) 0%,var
 .cal-cell-new.c-conflitto{border:2px solid #FFD700}
 .cal-dots-row{display:flex;gap:3px;align-items:center;min-height:7px}
 .cal-dot-ev{width:6px;height:6px;border-radius:50%;flex-shrink:0}
-.agenda-panel{position:fixed;bottom:0;left:0;right:65px;background:#16213e;border-top:2px solid var(--ale);border-radius:20px 20px 0 0;padding:16px 16px 28px;z-index:50;box-shadow:0 -10px 30px rgba(0,0,0,.5);max-height:70dvh;overflow-y:auto}
+.agenda-panel{position:fixed;left:0;right:65px;background:#16213e;border-top:2px solid var(--ale);border-radius:20px 20px 0 0;padding:16px 16px 28px;z-index:50;box-shadow:0 -10px 30px rgba(0,0,0,.5);overflow-y:auto;top:auto;bottom:0}
 .agenda-ev-item{background:var(--card);border:1px solid var(--border);border-left:4px solid var(--comune);border-radius:12px;padding:10px 12px;margin-bottom:8px;display:flex;align-items:center;gap:10px}
 .agenda-ev-info{flex:1;min-width:0}
 .agenda-ev-tit{font-size:14px;font-weight:900;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -130,7 +130,7 @@ body{font-family:var(--font);background:linear-gradient(160deg,var(--bg1) 0%,var
 <div class="page" id="page-app">
   <div id="app-content">
     <div class="app-header">
-      <div class="header-logo"><span style="font-size:22px">🦥</span><span>Famiglia Bradipi <span onclick="toggleDebug()" style="font-size:10px;opacity:.4;cursor:pointer;padding:4px">v20</span></span></div>
+      <div class="header-logo"><span style="font-size:22px">🦥</span><span>Famiglia Bradipi <span onclick="toggleDebug()" style="font-size:10px;opacity:.4;cursor:pointer;padding:4px">v21</span></span></div>
       <div class="header-badge ale" id="hdr-badge" onclick="logout()">👦 Ale</div>
     </div>
 
@@ -754,7 +754,7 @@ function renderSpese(oggiItems, storicoItems){
     if(!oggiItems || oggiItems.length === 0){
       elOggi.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:13px;font-weight:700;padding:10px 0">Nessuna spesa oggi 🦥</div>';
     } else {
-      const vis = oggiItems.slice(0,5);
+      const vis = oggiItems.slice(0,4);
       const nas = oggiItems.slice(5);
       let html = vis.map(cardSpesa).join('');
       if(nas.length > 0){
@@ -1199,6 +1199,19 @@ function selGiorno(iso){
         };
       });
     }
+  }
+  // Calcola top: subito sotto la griglia calendario
+  var calGriglia = document.getElementById('cal-celle');
+  if(calGriglia){
+    var rect = calGriglia.getBoundingClientRect();
+    var topPos = rect.bottom + 8;
+    panel.style.top = topPos + 'px';
+    panel.style.bottom = 'auto';
+    panel.style.maxHeight = (window.innerHeight - topPos - 10) + 'px';
+  } else {
+    panel.style.top = 'auto';
+    panel.style.bottom = '0';
+    panel.style.maxHeight = '70dvh';
   }
   panel.style.display = 'block';
 }
