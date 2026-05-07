@@ -131,7 +131,7 @@ body{font-family:var(--font);background:linear-gradient(160deg,var(--bg1) 0%,var
 <div class="page" id="page-app">
   <div id="app-content">
     <div class="app-header">
-      <div class="header-logo"><span style="font-size:22px">🦥</span><span>Famiglia Bradipi <span onclick="toggleDebug()" style="font-size:10px;opacity:.4;cursor:pointer;padding:4px">v24</span></span></div>
+      <div class="header-logo"><span style="font-size:22px">🦥</span><span>Famiglia Bradipi <span onclick="toggleDebug()" style="font-size:10px;opacity:.4;cursor:pointer;padding:4px">v25</span></span></div>
       <div class="header-badge ale" id="hdr-badge" onclick="logout()">👦 Ale</div>
     </div>
 
@@ -154,8 +154,7 @@ body{font-family:var(--font);background:linear-gradient(160deg,var(--bg1) 0%,var
       <div style="width:100%;max-width:300px">
         <div class="sez">Ultimi comandi</div>
         <div id="storico-list"><div style="text-align:center;color:var(--muted);font-size:13px;font-weight:700;padding:10px 0">nessun comando ancora 🦥</div></div>
-        <button onclick="apriModal('modal-manuale')" style="width:100%;margin-top:14px;background:rgba(255,107,107,.1);border:1px solid rgba(255,107,107,.25);border-radius:16px;padding:12px;color:#FF6B6B;font-family:var(--font);font-size:13px;font-weight:900;cursor:pointer">⚙️ Il Bradipo non ha capito? Inserisci manualmente</button>
-        <button onclick="apriLogErrori()" style="width:100%;margin-top:8px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:16px;padding:10px;color:var(--muted);font-family:var(--font);font-size:12px;font-weight:900;cursor:pointer">🐛 Log errori app</button>
+
       </div>
     </div>
 
@@ -437,13 +436,19 @@ body{font-family:var(--font);background:linear-gradient(160deg,var(--bg1) 0%,var
     <button onclick="esportaLog()" style="margin-top:10px;width:100%;background:rgba(255,107,107,.15);border:1px solid rgba(255,107,107,.3);border-radius:10px;padding:8px;color:#FF6B6B;font-family:var(--font);font-size:11px;font-weight:900;cursor:pointer">⬇️ Esporta log .txt</button>
   </div>
 
-  <!-- MODAL INSERIMENTO MANUALE -->
-  <div class="modal-overlay" id="modal-manuale" onclick="chiudiModal('modal-manuale')">
-    <div class="modal-box" onclick="event.stopPropagation()">
-      <div style="font-size:16px;font-weight:900;color:#fff">⚙️ Inserimento manuale</div>
-      <div style="font-size:12px;color:var(--muted);font-weight:700">Il Bradipo non ha capito? Inserisci manualmente.</div>
-      <input id="man-testo" type="text" placeholder="Comando originale..." class="form-input"/>
-      <select id="man-tipo" onchange="aggiornaCampiManuali()" class="form-input">
+  <!-- TAB SEGNALAZIONI -->
+  <div class="tab" id="tab-segnalazioni">
+    <div style="font-size:18px;font-weight:900;color:#fff;margin-bottom:16px;flex-shrink:0">⚠️ Segnalazioni</div>
+
+    <!-- COMANDI NON CAPITI -->
+    <div class="sez">Comandi non capiti</div>
+    <div id="seg-lista" style="margin-bottom:16px"></div>
+
+    <!-- FORM INSERIMENTO MANUALE -->
+    <div id="seg-form" style="display:none;background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:16px">
+      <div style="font-size:14px;font-weight:900;color:#fff;margin-bottom:12px">⚙️ Inserisci manualmente</div>
+      <div style="font-size:12px;color:var(--muted);font-weight:700;margin-bottom:8px" id="seg-cmd-lbl"></div>
+      <select id="man-tipo" onchange="aggiornaCampiManuali()" class="form-input" style="margin-bottom:8px">
         <option value="">Dove lo metto?</option>
         <option value="spesa">💰 Spesa</option>
         <option value="calendario">📅 Calendario</option>
@@ -451,13 +456,17 @@ body{font-family:var(--font);background:linear-gradient(160deg,var(--bg1) 0%,var
         <option value="postit">🗒️ Post-it</option>
         <option value="todo">✅ To-do</option>
       </select>
-      <!-- Campi dinamici -->
-      <div id="man-campi"></div>
-      <div style="display:flex;gap:10px">
+      <div id="man-campi" style="display:flex;flex-direction:column;gap:8px"></div>
+      <div style="display:flex;gap:10px;margin-top:12px">
         <button class="btn-ok" onclick="salvaManuale()">Salva 🦥</button>
-        <button class="btn-x" onclick="chiudiModal('modal-manuale')">✕</button>
+        <button class="btn-x" onclick="document.getElementById('seg-form').style.display='none'">Annulla</button>
       </div>
     </div>
+
+    <!-- LOG ERRORI -->
+    <div class="sez">Log errori app</div>
+    <div id="seg-log" style="margin-bottom:12px"></div>
+    <button onclick="esportaLog()" style="width:100%;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:14px;padding:10px;color:var(--muted);font-family:var(--font);font-size:12px;font-weight:900;cursor:pointer">⬇️ Esporta log .txt</button>
   </div>
 
   <nav id="nav-right">
@@ -467,6 +476,7 @@ body{font-family:var(--font);background:linear-gradient(160deg,var(--bg1) 0%,var
     <button class="nav-btn" onclick="switchTab('lista',this)"><span class="nav-icon">🛒</span><span class="nav-label">Lista</span></button>
     <button class="nav-btn" onclick="switchTab('postit',this)"><span class="nav-icon">🗒️</span><span class="nav-label">Post-it</span></button>
     <button class="nav-btn" onclick="switchTab('todo',this)"><span class="nav-icon">✅</span><span class="nav-label">To-do</span></button>
+    <button class="nav-btn" onclick="switchTab('segnalazioni',this)"><span class="nav-icon">⚠️</span><span class="nav-label">Aiuto</span></button>
   </nav>
 </div>
 
@@ -609,7 +619,11 @@ async function salvaManuale(){
       if(!testoTd){ alert('Inserisci un task!'); return; }
       await db.collection('todos').add({testo:testoTd,fatto:false,scadenza:scadTd,ts:firebase.firestore.FieldValue.serverTimestamp()});
     }
-    chiudiModal('modal-manuale');
+    var segForm = document.getElementById('seg-form');
+    if(segForm && segForm.dataset.segTesto){
+      segnaRisolta(segForm.dataset.segTesto);
+      segForm.style.display = 'none';
+    }
     mostraBolla(rispOk());
   }catch(e){
     logErrore('salvaManuale: '+e.message);
@@ -709,12 +723,24 @@ function switchTab(id, btn){
   if(id === 'postit') ascoltaPostit();
   if(id === 'lista') ascoltaListe();
   if(id === 'todo') ascoltaTodo();
+  if(id === 'segnalazioni') renderSegnalazioni();
   if(id === 'calendario'){
     calMeseVal = new Date().getMonth();
     calAnnoVal = new Date().getFullYear();
     eventiCache = [];
     caricaEventi();
     chiudiAgenda();
+    // Polling 30 secondi
+    if(window._calPolling) clearInterval(window._calPolling);
+    window._calPolling = setInterval(function(){
+      if(document.getElementById('tab-calendario').classList.contains('active')){
+        caricaEventi();
+      } else {
+        clearInterval(window._calPolling);
+      }
+    }, 30000);
+  } else {
+    if(window._calPolling){ clearInterval(window._calPolling); window._calPolling=null; }
   }
 }
 
@@ -804,18 +830,28 @@ async function chiamaGroq(testo){
   }
 }
 
-let tentNonCapito = 0;
+var tentNonCapito = 0;
+var ultimoComandoNonCapito = '';
 
 async function elaboraCmd(testo){
   mostraBolla('...elaboro 🦥');
-  const r = await chiamaGroq(testo);
+  var r = await chiamaGroq(testo);
   if(!r || r.tipo === 'sconosciuto'){
     tentNonCapito++;
-    mostraBolla(tentNonCapito >= 2 ? 'Non ci siamo... 🦥' : 'Non ho capito, ripeti? 🦥', '#FFB74D');
-    if(tentNonCapito >= 2) tentNonCapito = 0;
+    if(tentNonCapito === 1){
+      ultimoComandoNonCapito = testo;
+      mostraBolla('Non ho capito, ripeti? 🦥', '#FFB74D');
+    } else {
+      // Secondo tentativo fallito - invia segnalazione
+      salvaSegnalazione(ultimoComandoNonCapito || testo);
+      mostraBolla('Ho inviato la segnalazione 🦥 Vai in Aiuto per inserirla manualmente', '#FFB74D');
+      tentNonCapito = 0;
+      ultimoComandoNonCapito = '';
+    }
     return;
   }
   tentNonCapito = 0;
+  ultimoComandoNonCapito = '';
   const d = r.dati || {};
   if(r.tipo === 'spesa'){
     await salvaSpesaDB(d.importo, d.categoria||'Altro', d.nota||d.categoria||'', d.data||oggiISO());
@@ -1605,7 +1641,8 @@ async function aggiornaEvento(){
       body:JSON.stringify({summary:titolo,start:start,end:end})
     });
     chiudiModal('modal-mod-ev');
-    caricaEventi();
+    await caricaEventi();
+    if(calGiornoSel) selGiorno(calGiornoSel);
     mostraBolla(rispOk());
   }catch(e){ mostraBolla('Errore aggiornamento 😔','#FF6B6B'); }
 }
