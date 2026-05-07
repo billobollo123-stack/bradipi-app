@@ -1,1 +1,0 @@
-# bradipi-app
