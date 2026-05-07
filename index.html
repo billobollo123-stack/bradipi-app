@@ -130,7 +130,7 @@ body{font-family:var(--font);background:linear-gradient(160deg,var(--bg1) 0%,var
 <div class="page" id="page-app">
   <div id="app-content">
     <div class="app-header">
-      <div class="header-logo"><span style="font-size:22px">🦥</span><span>Famiglia Bradipi <span onclick="toggleDebug()" style="font-size:10px;opacity:.4;cursor:pointer;padding:4px">v18b</span></span></div>
+      <div class="header-logo"><span style="font-size:22px">🦥</span><span>Famiglia Bradipi <span onclick="toggleDebug()" style="font-size:10px;opacity:.4;cursor:pointer;padding:4px">v19</span></span></div>
       <div class="header-badge ale" id="hdr-badge" onclick="logout()">👦 Ale</div>
     </div>
 
@@ -193,11 +193,11 @@ body{font-family:var(--font);background:linear-gradient(160deg,var(--bg1) 0%,var
           <option value="6m">6 mesi</option><option value="tutto">Tutto</option>
         </select>
       </div>
-      <div class="sez">Oggi</div>
+      <div class="sez">Recenti (7 giorni)</div>
       <div id="spese-oggi"></div>
-      <div class="sez" style="margin-top:14px">Storico</div>
-      <div id="spese-lista"></div>
-      <button id="btn-altri" onclick="caricaAltri()" style="display:none;width:100%;margin-top:10px;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:13px;color:var(--muted);font-family:var(--font);font-size:13px;font-weight:900;cursor:pointer">Mostra altri 20 ▼</button>
+      <div id="storico-wrap" style="display:none"><div class="sez" style="margin-top:14px">Storico</div>
+      <div id="spese-lista"></div></div>
+      <button id="btn-altri" onclick="mostraStorico()" style="display:none;width:100%;margin-top:10px;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:13px;color:var(--muted);font-family:var(--font);font-size:13px;font-weight:900;cursor:pointer">📋 Mostra storico ▼</button>
     </div>
 
     <!-- CALENDARIO -->
@@ -310,7 +310,10 @@ body{font-family:var(--font);background:linear-gradient(160deg,var(--bg1) 0%,var
     <div class="tab" id="tab-postit">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-shrink:0">
         <div style="font-size:18px;font-weight:900;color:#fff">Post-it 🗒️</div>
-        <button onclick="apriModal('modal-postit')" style="background:rgba(144,202,249,.15);border:1.5px solid rgba(144,202,249,.3);border-radius:20px;padding:10px 16px;color:var(--ale);font-family:var(--font);font-size:13px;font-weight:900;cursor:pointer">+ Post-it</button>
+        <div style="display:flex;gap:8px">
+          <button onclick="eliminaTuttiPostit()" style="background:rgba(255,107,107,.12);border:1px solid rgba(255,107,107,.3);border-radius:20px;padding:10px 14px;color:#FF6B6B;font-family:var(--font);font-size:13px;font-weight:900;cursor:pointer">🗑️ Tutti</button>
+          <button onclick="apriModal('modal-postit')" style="background:rgba(144,202,249,.15);border:1.5px solid rgba(144,202,249,.3);border-radius:20px;padding:10px 16px;color:var(--ale);font-family:var(--font);font-size:13px;font-weight:900;cursor:pointer">+ Post-it</button>
+        </div>
       </div>
       <div id="postit-board" style="flex:1;overflow:hidden;position:relative"></div>
     </div>
@@ -564,7 +567,8 @@ function buildPrompt(){
     'REGOLA PRIVATO: se nel testo c\u0027è "Ale" o "Alessandro" = tipo_evento privato-ale. Se c\u0027è "Maura" = privato-maura. Se ci sono entrambi o nessuno = comune.',
     'Categorie spese: Alimentari, Ristorante, Bollette, Svago, Trasporto, Salute, Abbigliamento, Istruzione, Risparmi, Altro',
     'Negozi: Pewex/Paolo=Alimentari, pizzeria/trattoria/pub/osteria=Ristorante',
-    'Fasce: mattina=08-13, pranzo=12-15, pomeriggio=15-19, sera=19-23, notte=23-05',
+    'Fasce orarie (usa SOLO se non c\'e un orario esplicito): colazione=07-09, mattina=08-13, pranzo=12-14, pomeriggio=15-19, cena=19-22, sera=19-23, notte=23-05.',
+    'PRIORITA ORARIO: se nel testo c\'e un orario esplicito (es. alle 23:00) usa SEMPRE quello, ignora la fascia.',
     'Schema risposta: {"tipo":"spesa|calendario|lista|postit|todo|sconosciuto","dati":{"importo":0,"categoria":"","nota":"","data":"YYYY-MM-DD","titolo":"","oraInizio":"HH:MM","oraFine":"HH:MM","tipo_evento":"comune","articoli":[],"testo":""}}'
   ].join('\n');
   return prompt;
@@ -773,14 +777,18 @@ function renderSpese(oggiItems, storicoItems){
   renderGrafici(speseTutte);
 }
 
-function caricaAltri(){
-  const storicoItems = speseTutte.filter(function(s){ return s.data !== oggiISO(); });
-  const lista = document.getElementById('spese-lista');
-  if(lista) lista.innerHTML = storicoItems.map(cardSpesa).join('');
-  tutteCaricate = true;
-  const btn = document.getElementById('btn-altri');
+function mostraStorico(){
+  var oggi7 = new Date(); oggi7.setDate(oggi7.getDate()-7);
+  var oggi7ISO = oggi7.toISOString().split('T')[0];
+  var storicoItems = speseTutte.filter(function(s){ return s.data < oggi7ISO; });
+  var wrap = document.getElementById('storico-wrap');
+  var lista = document.getElementById('spese-lista');
+  if(wrap) wrap.style.display = 'block';
+  if(lista) lista.innerHTML = storicoItems.length > 0 ? storicoItems.map(cardSpesa).join('') : '<div style="text-align:center;color:var(--muted);font-size:13px;font-weight:700;padding:10px 0">Nessuno storico 🦥</div>';
+  var btn = document.getElementById('btn-altri');
   if(btn) btn.style.display = 'none';
 }
+function caricaAltri(){ mostraStorico(); }
 
 function renderGrafici(data){
   const perCat = {};
@@ -932,6 +940,17 @@ async function elimPostit(id){
   if(!confirm('Elimino?')) return;
   await db.collection('postits').doc(id).delete();
   mostraBolla(rispOk());
+}
+
+async function eliminaTuttiPostit(){
+  if(!confirm('Elimino tutti i post-it?')) return;
+  try{
+    var snap = await db.collection('postits').get();
+    var batch = db.batch();
+    snap.docs.forEach(function(doc){ batch.delete(doc.ref); });
+    await batch.commit();
+    mostraBolla(rispOk());
+  }catch(e){ mostraBolla('Errore 😔','#FF6B6B'); }
 }
 
 // FORM SPESA — imposta data
@@ -1090,8 +1109,13 @@ function mkCell(n, altro, isOggi, evs, isDom, isSel, iso){
         var bs2=evs[b2].start&&(evs[b2].start.dateTime||evs[b2].start.date);
         var be2=evs[b2].end&&(evs[b2].end.dateTime||evs[b2].end.date);
         if(as&&bs2){
-          var dAs=new Date(as);var dAe=ae?new Date(ae):new Date(dAs.getTime()+3600000);
-          var dBs=new Date(bs2);var dBe=be2?new Date(be2):new Date(dBs.getTime()+3600000);
+          var dAs=new Date(as);
+          var dAe=ae?new Date(ae):new Date(dAs.getTime()+3600000);
+          var dBs=new Date(bs2);
+          var dBe=be2?new Date(be2):new Date(dBs.getTime()+3600000);
+          // Se durata zero usa +1 minuto
+          if(dAs.getTime()===dAe.getTime()) dAe=new Date(dAs.getTime()+60000);
+          if(dBs.getTime()===dBe.getTime()) dBe=new Date(dBs.getTime()+60000);
           if(dAs<dBe&&dAe>dBs) haConflitto=true;
         }
       }
@@ -1122,24 +1146,6 @@ function selGiorno(iso){
   calGiornoSel = iso;
   renderCalendario();
   apriAgenda(iso);
-  function apriAgenda(iso){
-  var panel=document.getElementById('agenda-panel');
-  var lbl=document.getElementById('agenda-data-lbl');
-  var lista=document.getElementById('agenda-ev-list');
-  if(!panel||!lbl||!lista)return;
-  var d=new Date(iso+'T12:00:00');
-  lbl.textContent=GIORNI_S[d.getDay()]+' '+d.getDate()+' '+MESI[d.getMonth()];
-  var evG=eventiCache.filter(function(ev){return(ev.start&&(ev.start.date||ev.start.dateTime||'')).slice(0,10)===iso;});
-  if(evG.length===0){lista.innerHTML='<div style="text-align:center;color:var(--muted);font-size:13px;font-weight:700;padding:16px 0">Nessun evento 🦥</div>';}
-  else{lista.innerHTML=evG.map(function(ev){var s=ev.start&&ev.start.dateTime?fmtOra(ev.start.dateTime):'Tutto il giorno';var e2=ev.end&&ev.end.dateTime?fmtOra(ev.end.dateTime):'';return'<div class="agenda-ev-item" style="border-left-color:'+colorIdToHex(ev.colorId)+'"><div class="agenda-ev-info"><div class="agenda-ev-tit">'+esc(ev.summary||'Evento')+'</div><div class="agenda-ev-ora">'+s+(e2?' → '+e2:'')+'</div></div></div>';}).join('');}
-  panel.style.display='block';
-}
-function chiudiAgenda(){
-  var panel=document.getElementById('agenda-panel');
-  if(panel)panel.style.display='none';
-  calGiornoSel=null;
-  renderCalendario();
-}
 }
 
 // mkCell e selGiorno definiti sopra nel nuovo renderCalendario
