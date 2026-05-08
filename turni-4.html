@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Turni Bradipi 🦥</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;height:100%;overflow-x:hidden}
+:root{
+  --bg1:#1a1a2e;--bg2:#16213e;--bg3:#0f3460;
+  --ale:#90CAF9;--turno:#EF5350;--straord:#9C27B0;--riposo:rgba(255,255,255,.15);
+  --text:#e2e8f0;--muted:rgba(255,255,255,0.35);
+  --border:rgba(255,255,255,0.09);--card:rgba(255,255,255,0.06);
+  --font:'Nunito',sans-serif;
+}
+body{font-family:var(--font);background:linear-gradient(160deg,var(--bg1) 0%,var(--bg2) 55%,var(--bg3) 100%);color:var(--text);min-height:100dvh;padding:20px 16px 40px}
+.header{display:flex;align-items:center;gap:10px;margin-bottom:24px}
+.header h1{font-size:20px;font-weight:900;color:#fff}
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:12px}
+.sez{font-size:10px;font-weight:900;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px}
+.btn{width:100%;padding:14px;border-radius:16px;border:none;font-family:var(--font);font-size:15px;font-weight:900;cursor:pointer;margin-bottom:10px}
+.btn-primary{background:rgba(144,202,249,.2);border:1.5px solid rgba(144,202,249,.4);color:var(--ale)}
+.btn-danger{background:rgba(239,83,80,.15);border:1.5px solid rgba(239,83,80,.3);color:var(--turno)}
+.btn-ok{background:rgba(78,205,196,.15);border:1.5px solid rgba(78,205,196,.3);color:#4ECDC4}
+.btn-sm{padding:8px 14px;border-radius:12px;border:none;font-family:var(--font);font-size:12px;font-weight:900;cursor:pointer}
+.turno-card{border-radius:14px;padding:14px;margin-bottom:8px;border:2px solid transparent}
+.turno-card.normale{background:rgba(239,83,80,.1);border-color:rgba(239,83,80,.3)}
+.turno-card.straord{background:rgba(156,39,176,.1);border-color:rgba(156,39,176,.3)}
+.turno-card.riposo{background:var(--card);border-color:var(--border);opacity:.6}
+.turno-card.warning{border-color:#FFD700;background:rgba(255,215,0,.08)}
+.giorno-lbl{font-size:12px;font-weight:900;color:var(--muted);margin-bottom:4px}
+.turno-ore{font-size:20px;font-weight:900;color:#fff}
+.turno-post{font-size:13px;font-weight:700;color:var(--ale);margin-top:2px}
+.badge-warn{display:inline-block;background:#FFD700;color:#1a1a2e;font-size:10px;font-weight:900;padding:2px 8px;border-radius:10px;margin-top:4px}
+.badge-straord{display:inline-block;background:var(--straord);color:#fff;font-size:10px;font-weight:900;padding:2px 8px;border-radius:10px;margin-top:4px}
+input[type=file]{display:none}
+.upload-area{border:2px dashed var(--border);border-radius:16px;padding:30px;text-align:center;cursor:pointer;margin-bottom:16px}
+.upload-area:hover{border-color:var(--ale)}
+.form-input{width:100%;background:rgba(255,255,255,.07);border:1.5px solid var(--border);border-radius:12px;padding:10px 14px;color:var(--text);font-family:var(--font);font-size:14px;font-weight:600;outline:none;margin-bottom:8px}
+.edit-row{display:flex;gap:8px;align-items:center;margin-top:8px}
+.edit-row input{flex:1;background:rgba(255,255,255,.07);border:1px solid var(--border);border-radius:10px;padding:7px 10px;color:var(--text);font-family:var(--font);font-size:13px;font-weight:700;outline:none}
+#log{font-size:11px;color:var(--muted);margin-top:8px;line-height:1.6}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <span style="font-size:32px">🦥</span>
+  <div>
+    <h1>Turni Bradipi</h1>
+    <div style="font-size:11px;color:var(--muted);font-weight:700">Mini app turni — solo per Ale</div>
+  </div>
+</div>
+
+<!-- STEP 1: SIGLA + UPLOAD -->
+<div id="step-upload">
+  <div class="card">
+    <div class="sez">La tua sigla (salvata automaticamente)</div>
+    <input id="sigla-input" type="text" placeholder="Es. RS" class="form-input" style="text-transform:uppercase;font-size:20px;font-weight:900;text-align:center"
+      oninput="localStorage.setItem('turni_sigla',this.value.toUpperCase())"/>
+  </div>
+
+  <div class="card">
+    <div class="sez">Carica PDF turni</div>
+    <div class="upload-area" onclick="document.getElementById('pdf-input').click()">
+      <div style="font-size:36px;margin-bottom:8px">📄</div>
+      <div style="font-size:14px;font-weight:900;color:var(--ale)">Tocca per selezionare il PDF</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px">ORARIO_DEFINITIVO_...</div>
+    </div>
+    <input type="file" id="pdf-input" accept=".pdf" onchange="caricaPDF(this)"/>
+    <div id="log"></div>
+  </div>
+</div>
+
+<!-- STEP 2: ANTEPRIMA -->
+<div id="step-anteprima" style="display:none">
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div>
+        <div class="sez" style="margin-bottom:2px">Settimana</div>
+        <div style="font-size:16px;font-weight:900;color:#fff" id="settimana-lbl">—</div>
+      </div>
+      <button class="btn-sm" onclick="tornaUpload()" style="background:var(--card);border:1px solid var(--border);color:var(--muted)">← Cambia PDF</button>
+    </div>
+    <div id="avvisi-wrap" style="display:none;background:rgba(255,215,0,.08);border:1px solid rgba(255,215,0,.3);border-radius:12px;padding:10px;margin-bottom:12px">
+      <div style="font-size:12px;font-weight:900;color:#FFD700;margin-bottom:4px">⚠️ Permessi da definire</div>
+      <div id="avvisi-list" style="font-size:11px;color:var(--muted)"></div>
+    </div>
+  </div>
+
+  <div id="turni-lista"></div>
+
+  <div class="card">
+    <div class="sez">Invio a Google Calendar</div>
+    <div style="font-size:12px;color:var(--muted);font-weight:700;margin-bottom:12px">Elimina i turni esistenti della settimana e inserisce quelli nuovi. RI e NL non vengono inviati.</div>
+    <button class="btn btn-ok" onclick="inviaACalendar()">📅 Invia a Google Calendar</button>
+    <div id="stato-invio" style="font-size:12px;color:var(--muted);text-align:center;margin-top:6px"></div>
+  </div>
+</div>
+
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+const GOOGLE_CLIENT_ID = '918879289572-qmkl8fctt11b41eghkudiqt2oe4ud2i8.apps.googleusercontent.com';
+const GOOGLE_SCOPES = 'https://www.googleapis.com/auth/calendar';
+const GIORNI = ['DOM','LUN','MAR','MER','GIO','VEN','SAB'];
+const GIORNI_IT = ['Domenica','Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato'];
+
+let gToken = null;
+let gExpiry = 0;
+let tokenClient = null;
+let turniSettimana = [];
+let settimanaISO = '';
+
+// ============================================================
+// AUTH GOOGLE
+// ============================================================
+function initAuth(){
+  if(typeof google === 'undefined'){ setTimeout(initAuth, 500); return; }
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: GOOGLE_CLIENT_ID,
+    scope: GOOGLE_SCOPES,
+    callback: function(r){
+      if(!r.error){
+        gToken = r.access_token;
+        gExpiry = Date.now() + (r.expires_in - 300) * 1000;
+      }
+    }
+  });
+  tokenClient.requestAccessToken({prompt:''});
+}
+
+async function getToken(){
+  if(gToken && Date.now() < gExpiry) return gToken;
+  return new Promise(function(res){
+    tokenClient.callback = function(r){
+      if(!r.error){ gToken = r.access_token; gExpiry = Date.now()+(r.expires_in-300)*1000; }
+      res(gToken);
+    };
+    tokenClient.requestAccessToken({prompt:''});
+  });
+}
+
+// ============================================================
+// CALCOLO TURNO
+// ============================================================
+function addMin(baseMin, delta){ return baseMin + delta; }
+function minToStr(m){
+  var h = Math.floor(((m % 1440) + 1440) % 1440 / 60);
+  var min = ((m % 1440) + 1440) % 1440 % 60;
+  return String(h).padStart(2,'0')+':'+String(min).padStart(2,'0');
+}
+function strToMin(s){
+  var p = s.replace('.',':').split(':');
+  return parseInt(p[0])*60 + parseInt(p[1]);
+}
+
+function calcolaFine(orarioStr, mod){
+  var ini = strToMin(orarioStr);
+  if(mod === '-') ini += 60;
+  var fine = ini + 8*60 + 35;
+  if(mod === '+') fine -= 60;
+
+  // Fasce mensa
+  var pranzoIni = strToMin('12:00');
+  var pranzoFin = strToMin('15:05');
+  var cenaIni = strToMin('19:00');
+  var cenaFin = strToMin('22:00');
+
+  var mensaInclusa = (ini <= pranzoIni && fine >= pranzoFin) || (ini <= cenaIni && fine >= cenaFin);
+  if(!mensaInclusa) fine -= 35;
+
+  return {ini: minToStr(ini), fine: minToStr(fine)};
+}
+
+// ============================================================
+// LETTURA PDF
+// ============================================================
+async function caricaPDF(input){
+  var sigla = document.getElementById('sigla-input').value.trim().toUpperCase();
+  if(typeof pdfjsLib === 'undefined'){
+    alert('Errore: libreria PDF non caricata. Ricarica la pagina.');
+    return;
+  }
+  alert('caricaPDF chiamato, sigla: '+sigla);
+  if(!sigla){ alert('Inserisci la tua sigla prima!'); return; }
+  var file = input.files[0];
+  if(!file){ alert('Nessun file selezionato'); return; }
+  alert('File: '+file.name+' size: '+file.size);
+  log('Lettura PDF...');
+  try{
+    var arrayBuf = await file.arrayBuffer();
+    var pdf = await pdfjsLib.getDocument({data: arrayBuf}).promise;
+    var testo = '';
+    for(var i=1;i<=pdf.numPages;i++){
+      var page = await pdf.getPage(i);
+      var content = await page.getTextContent();
+      testo += content.items.map(function(it){ return it.str; }).join(' ') + '\n';
+    }
+    log('PDF letto, cerco sigla '+sigla+'...');
+    parsaTurni(testo, sigla);
+  }catch(e){
+    log('Errore lettura PDF: '+e.message);
+  }
+}
+
+function parsaTurni(testo, sigla){
+  // Estrai date dalla prima riga (es. 03/05 04/05 05/05...)
+  var dateMatch = testo.match(/(\d{2}\/\d{2}(?:\/\d{4})?(?:\s+\d{2}\/\d{2}(?:\/\d{4})?){6})/);
+  var date = [];
+  var anno = new Date().getFullYear();
+
+  // Cerca riga con le date
+  var righe = testo.split('\n');
+  var dataRiga = '';
+  for(var i=0;i<righe.length;i++){
+    if(/\d{2}\/\d{2}.*\d{2}\/\d{2}.*\d{2}\/\d{2}/.test(righe[i])){
+      dataRiga = righe[i];
+      break;
+    }
+  }
+
+  // Estrai le 7 date
+  var dateTokens = dataRiga.match(/\d{2}\/\d{2}(?:\/\d{4})?/g) || [];
+  for(var j=0;j<Math.min(7,dateTokens.length);j++){
+    var parts = dateTokens[j].split('/');
+    var annoDate = parts[2] ? parseInt(parts[2]) : anno;
+    date.push({
+      giorno: parseInt(parts[0]),
+      mese: parseInt(parts[1])-1,
+      anno: annoDate,
+      iso: annoDate+'-'+parts[1]+'-'+parts[0]
+    });
+  }
+
+  if(date.length < 7){ log('Errore: non trovate 7 date nel PDF'); return; }
+
+  settimanaISO = date[0].iso;
+  document.getElementById('settimana-lbl').textContent =
+    date[0].giorno+'/'+('0'+(date[0].mese+1)).slice(-2)+' — '+date[6].giorno+'/'+('0'+(date[6].mese+1)).slice(-2)+'/'+date[0].anno;
+
+  // Trova riga della sigla
+  var rigaSigla = '';
+  for(var k=0;k<righe.length;k++){
+    var r = righe[k].trim();
+    if(r.startsWith(sigla+' ') || r.startsWith(sigla+'\t')){
+      rigaSigla = r;
+      break;
+    }
+  }
+
+  // Fallback: cerca sigla ovunque nella riga
+  if(!rigaSigla){
+    for(var k2=0;k2<righe.length;k2++){
+      if(new RegExp('\\b'+sigla+'\\b').test(righe[k2]) &&
+         (righe[k2].includes('RI') || righe[k2].includes('NL') || /\d{2}\.\d{2}/.test(righe[k2]))){
+        rigaSigla = righe[k2];
+        break;
+      }
+    }
+  }
+
+  if(!rigaSigla){ log('Sigla '+sigla+' non trovata nel PDF'); return; }
+  log('Trovata riga: '+rigaSigla.substring(0,80));
+
+  // Rimuovi sigla dall'inizio
+  rigaSigla = rigaSigla.replace(new RegExp('^'+sigla+'\\s*'), '');
+
+  // Tokenizza le celle (7 celle per 7 giorni)
+  // Ogni cella può essere: RI, NL, oppure "HH.MM[+/-/*] [CODICE]" con eventuale (NL) o (RI)
+  var celle = tokenizzaCelle(rigaSigla, 7);
+  log('Celle trovate: '+celle.length);
+
+  turniSettimana = [];
+  var avvisi = [];
+
+  for(var d=0;d<7;d++){
+    var cella = (celle[d]||'').trim();
+    var dataObj = date[d];
+    var dowIdx = new Date(dataObj.anno, dataObj.mese, dataObj.giorno).getDay();
+
+    if(!cella || cella === 'RI'){
+      turniSettimana.push({data:dataObj, tipo:'riposo', label:GIORNI[dowIdx]+' '+dataObj.giorno, cella:'RI'});
+      continue;
+    }
+    if(cella === 'NL'){
+      turniSettimana.push({data:dataObj, tipo:'riposo', label:GIORNI[dowIdx]+' '+dataObj.giorno, cella:'NL'});
+      continue;
+    }
+
+    // Controlla straordinario: (NL) o (RI) nella cella
+    var straord = /\(NL\)|\(RI\)/.test(cella);
+
+    // Estrai orario
+    var orMatch = cella.match(/(\d{2}[.:]\d{2})/);
+    if(!orMatch){ turniSettimana.push({data:dataObj, tipo:'riposo', label:GIORNI[dowIdx]+' '+dataObj.giorno, cella:cella}); continue; }
+    var orario = orMatch[1].replace(':','.');
+
+    // Modificatori
+    var haPlus = /\d{2}[.:]\d{2}\+/.test(cella);
+    var haMinus = /\d{2}[.:]\d{2}-/.test(cella);
+    var haStar = /\d{2}[.:]\d{2}\*/.test(cella);
+    var mod = haPlus ? '+' : haMinus ? '-' : '';
+
+    // Postazione: ultima parola maiuscola
+    var postaMatch = cella.match(/([A-Z][A-Z0-9]{1,4})\s*$/);
+    var postazione = postaMatch ? postaMatch[1] : '';
+
+    var orari = calcolaFine(orario, haStar ? '' : mod);
+
+    var turno = {
+      data: dataObj,
+      tipo: straord ? 'straord' : 'normale',
+      label: GIORNI[dowIdx]+' '+dataObj.giorno,
+      cella: cella,
+      orarioOrig: orario,
+      mod: mod,
+      star: haStar,
+      postazione: postazione,
+      ini: orari.ini,
+      fine: orari.fine,
+      straord: straord
+    };
+
+    if(haStar) avvisi.push(GIORNI[dowIdx]+' '+dataObj.giorno+' — '+orario+'* '+postazione);
+    turniSettimana.push(turno);
+  }
+
+  // Mostra avvisi
+  if(avvisi.length > 0){
+    document.getElementById('avvisi-wrap').style.display = 'block';
+    document.getElementById('avvisi-list').innerHTML = avvisi.map(function(a){ return '• '+a; }).join('<br>');
+  }
+
+  renderAnteprima();
+  document.getElementById('step-upload').style.display = 'none';
+  document.getElementById('step-anteprima').style.display = 'block';
+}
+
+function tokenizzaCelle(riga, n){
+  var tokens = riga.trim().split(/\s+/).filter(function(t){ return t.length > 0; });
+  var celle = [];
+  var i = 0;
+  while(celle.length < n && i < tokens.length){
+    var t = tokens[i];
+    if(t === 'RI' || t === 'NL'){
+      celle.push(t);
+      i++;
+    } else if(/^\d{2}[.:]\d{2}/.test(t)){
+      var cella = t;
+      i++;
+      // Aggiungi (NL) o (RI) se presenti
+      if(i < tokens.length && /^\(NL\)$|^\(RI\)$/.test(tokens[i])){
+        cella += ' ' + tokens[i]; i++;
+      }
+      // Aggiungi postazione (lettere maiuscole, slash, numeri)
+      if(i < tokens.length && /^[A-Z][A-Z0-9/]{1,4}$/.test(tokens[i])){
+        cella += ' ' + tokens[i]; i++;
+      }
+      celle.push(cella);
+    } else {
+      i++;
+    }
+  }
+  // Completa con RI se mancano giorni
+  while(celle.length < n) celle.push('RI');
+  return celle;
+}
+
+// ============================================================
+// RENDER ANTEPRIMA
+// ============================================================
+function renderAnteprima(){
+  var el = document.getElementById('turni-lista');
+  el.innerHTML = turniSettimana.map(function(t, idx){
+    if(t.tipo === 'riposo'){
+      return '<div class="turno-card riposo">'+
+        '<div class="giorno-lbl">'+t.label+'</div>'+
+        '<div style="font-size:16px;color:var(--muted);font-weight:700">'+t.cella+'</div>'+
+        '</div>';
+    }
+    var cls = t.star ? 'turno-card warning' : (t.straord ? 'turno-card straord' : 'turno-card normale');
+    return '<div class="'+cls+'" id="turno-'+idx+'">'+
+      '<div class="giorno-lbl">'+t.label+'</div>'+
+      '<div class="turno-ore" id="ore-'+idx+'">'+t.ini+' → '+t.fine+'</div>'+
+      '<div class="turno-post">'+t.postazione+'</div>'+
+      (t.star ? '<div class="badge-warn">⚠️ Permesso da definire</div>' : '')+
+      (t.straord ? '<div class="badge-straord">🔴 Straordinario</div>' : '')+
+      '<div class="edit-row">'+
+      '<input type="time" value="'+t.ini+'" id="ini-'+idx+'" onchange="aggiornaTurno('+idx+')"/>'+
+      '<span style="color:var(--muted);font-weight:900">→</span>'+
+      '<input type="time" value="'+t.fine+'" id="fine-'+idx+'" onchange="aggiornaTurno('+idx+')"/>'+
+      '<input type="text" value="'+t.postazione+'" id="post-'+idx+'" placeholder="Postazione" style="max-width:80px" onchange="aggiornaTurno('+idx+')"/>'+
+      '</div>'+
+      '</div>';
+  }).join('');
+}
+
+function aggiornaTurno(idx){
+  var ini = document.getElementById('ini-'+idx).value;
+  var fine = document.getElementById('fine-'+idx).value;
+  var post = document.getElementById('post-'+idx).value;
+  turniSettimana[idx].ini = ini;
+  turniSettimana[idx].fine = fine;
+  turniSettimana[idx].postazione = post;
+  var oreEl = document.getElementById('ore-'+idx);
+  if(oreEl) oreEl.textContent = ini+' → '+fine;
+}
+
+// ============================================================
+// INVIO A GOOGLE CALENDAR
+// ============================================================
+async function inviaACalendar(){
+  var stato = document.getElementById('stato-invio');
+  stato.textContent = '🔐 Autenticazione...';
+  var token = await getToken();
+  if(!token){ stato.textContent = '❌ Errore autenticazione Google'; return; }
+
+  stato.textContent = '🗑️ Elimino turni esistenti...';
+
+  // Elimina turni esistenti della settimana
+  try{
+    var d0 = new Date(turniSettimana[0].data.anno, turniSettimana[0].data.mese, turniSettimana[0].data.giorno);
+    var d7 = new Date(d0.getTime() + 7*24*60*60*1000);
+    var timeMin = d0.toISOString();
+    var timeMax = d7.toISOString();
+
+    var r = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin='+timeMin+'&timeMax='+timeMax+'&singleEvents=true&maxResults=50',{
+      headers:{'Authorization':'Bearer '+token}
+    });
+    var evList = await r.json();
+    var turniEv = (evList.items||[]).filter(function(ev){
+      return ev.summary && (ev.summary.includes('Turno') || ev.colorId === '11' || ev.colorId === '3');
+    });
+
+    for(var i=0;i<turniEv.length;i++){
+      await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events/'+turniEv[i].id,{
+        method:'DELETE',
+        headers:{'Authorization':'Bearer '+token}
+      });
+    }
+    stato.textContent = '✅ Eliminati '+turniEv.length+' turni esistenti';
+  }catch(e){ stato.textContent = '⚠️ Errore eliminazione: '+e.message; }
+
+  // Inserisci nuovi turni
+  var inseriti = 0;
+  var errori = 0;
+  for(var j=0;j<turniSettimana.length;j++){
+    var t = turniSettimana[j];
+    if(t.tipo === 'riposo') continue;
+
+    stato.textContent = '📅 Inserisco '+t.label+'...';
+
+    var dataISO = t.data.anno+'-'+String(t.data.mese+1).padStart(2,'0')+'-'+String(t.data.giorno).padStart(2,'0');
+    var colorId = t.straord ? '3' : '11'; // 3=viola, 11=rosso
+    var titolo = t.ini+' - '+t.fine+' '+t.postazione+(t.star?' ⚠️':'')+(t.straord?' (STR)':'');
+    var startDT = dataISO+'T'+t.ini+':00';
+    var endDT = dataISO+'T'+t.fine+':00';
+
+    // Gestione fine turno dopo mezzanotte
+    if(t.fine < t.ini){
+      var domani = new Date(t.data.anno, t.data.mese, t.data.giorno+1);
+      endDT = domani.getFullYear()+'-'+String(domani.getMonth()+1).padStart(2,'0')+'-'+String(domani.getDate()).padStart(2,'0')+'T'+t.fine+':00';
+    }
+
+    try{
+      await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events',{
+        method:'POST',
+        headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},
+        body:JSON.stringify({
+          summary: titolo,
+          start: {dateTime: startDT, timeZone:'Europe/Rome'},
+          end: {dateTime: endDT, timeZone:'Europe/Rome'},
+          colorId: colorId,
+          reminders: {useDefault:false},
+          transparency: 'transparent'
+        })
+      });
+      inseriti++;
+    }catch(e){ errori++; }
+  }
+
+  stato.textContent = '🦥 Fatto! '+inseriti+' turni inviati'+(errori>0?' ('+errori+' errori)':'');
+}
+
+function tornaUpload(){
+  document.getElementById('step-upload').style.display = 'block';
+  document.getElementById('step-anteprima').style.display = 'none';
+  turniSettimana = [];
+}
+
+function log(msg){
+  var el = document.getElementById('log');
+  if(el) el.innerHTML += msg+'<br>';
+}
+
+// Avvio auth
+window.addEventListener('load', function(){
+  // Carica sigla salvata
+  var siglaSalvata = localStorage.getItem('turni_sigla');
+  if(siglaSalvata) document.getElementById('sigla-input').value = siglaSalvata;
+
+  var s = document.createElement('script');
+  s.src = 'https://accounts.google.com/gsi/client';
+  s.onload = initAuth;
+  document.head.appendChild(s);
+});
+</script>
+</body>
+</html>
