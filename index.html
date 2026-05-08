@@ -131,7 +131,7 @@ body{font-family:var(--font);background:linear-gradient(160deg,var(--bg1) 0%,var
 <div class="page" id="page-app">
   <div id="app-content">
     <div class="app-header">
-      <div class="header-logo"><span style="font-size:22px">🦥</span><span>Famiglia Bradipi <span onclick="toggleDebug()" style="font-size:10px;opacity:.4;cursor:pointer;padding:4px">v26</span></span></div>
+      <div class="header-logo"><span style="font-size:22px">🦥</span><span>Famiglia Bradipi <span onclick="toggleDebug()" style="font-size:10px;opacity:.4;cursor:pointer;padding:4px">v27</span></span></div>
       <div class="header-badge ale" id="hdr-badge" onclick="logout()">👦 Ale</div>
     </div>
 
@@ -436,38 +436,34 @@ body{font-family:var(--font);background:linear-gradient(160deg,var(--bg1) 0%,var
     <button onclick="esportaLog()" style="margin-top:10px;width:100%;background:rgba(255,107,107,.15);border:1px solid rgba(255,107,107,.3);border-radius:10px;padding:8px;color:#FF6B6B;font-family:var(--font);font-size:11px;font-weight:900;cursor:pointer">⬇️ Esporta log .txt</button>
   </div>
 
-  <!-- TAB SEGNALAZIONI -->
-  <div class="tab" id="tab-segnalazioni" style="padding:20px">
-    <div style="font-size:18px;font-weight:900;color:#fff;margin-bottom:16px;flex-shrink:0">⚠️ Segnalazioni</div>
 
-    <!-- COMANDI NON CAPITI -->
-    <div class="sez">Comandi non capiti</div>
-    <div id="seg-lista" style="margin-bottom:16px"></div>
 
-    <!-- FORM INSERIMENTO MANUALE -->
-    <div id="seg-form" style="display:none;background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:16px">
-      <div style="font-size:14px;font-weight:900;color:#fff;margin-bottom:12px">⚙️ Inserisci manualmente</div>
-      <div style="font-size:12px;color:var(--muted);font-weight:700;margin-bottom:8px" id="seg-cmd-lbl"></div>
-      <select id="man-tipo" onchange="aggiornaCampiManuali()" class="form-input" style="margin-bottom:8px">
-        <option value="">Dove lo metto?</option>
-        <option value="spesa">💰 Spesa</option>
-        <option value="calendario">📅 Calendario</option>
-        <option value="lista">🛒 Lista spesa</option>
-        <option value="postit">🗒️ Post-it</option>
-        <option value="todo">✅ To-do</option>
-      </select>
-      <div id="man-campi" style="display:flex;flex-direction:column;gap:8px"></div>
-      <div style="display:flex;gap:10px;margin-top:12px">
-        <button class="btn-ok" onclick="salvaManuale()">Salva 🦥</button>
-        <button class="btn-x" onclick="document.getElementById('seg-form').style.display='none'">Annulla</button>
+    <!-- TAB SEGNALAZIONI -->
+    <div class="tab" id="tab-segnalazioni">
+      <div style="font-size:18px;font-weight:900;color:#fff;margin-bottom:16px;flex-shrink:0">⚠️ Segnalazioni</div>
+      <div class="sez">Comandi non capiti</div>
+      <div id="seg-lista" style="margin-bottom:16px"></div>
+      <div id="seg-form" style="display:none;background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:16px">
+        <div style="font-size:14px;font-weight:900;color:#fff;margin-bottom:12px">⚙️ Inserisci manualmente</div>
+        <div style="font-size:12px;color:var(--muted);font-weight:700;margin-bottom:8px" id="seg-cmd-lbl"></div>
+        <select id="man-tipo" onchange="aggiornaCampiManuali()" class="form-input" style="margin-bottom:8px">
+          <option value="">Dove lo metto?</option>
+          <option value="spesa">💰 Spesa</option>
+          <option value="calendario">📅 Calendario</option>
+          <option value="lista">🛒 Lista spesa</option>
+          <option value="postit">🗒️ Post-it</option>
+          <option value="todo">✅ To-do</option>
+        </select>
+        <div id="man-campi" style="display:flex;flex-direction:column;gap:8px"></div>
+        <div style="display:flex;gap:10px;margin-top:12px">
+          <button class="btn-ok" onclick="salvaManuale()">Salva 🦥</button>
+          <button class="btn-x" onclick="document.getElementById('seg-form').style.display='none'">Annulla</button>
+        </div>
       </div>
+      <div class="sez">Log errori app</div>
+      <div id="seg-log" style="margin-bottom:12px"></div>
+      <button onclick="esportaLog()" style="width:100%;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:14px;padding:10px;color:var(--muted);font-family:var(--font);font-size:12px;font-weight:900;cursor:pointer">⬇️ Esporta log .txt</button>
     </div>
-
-    <!-- LOG ERRORI -->
-    <div class="sez">Log errori app</div>
-    <div id="seg-log" style="margin-bottom:12px"></div>
-    <button onclick="esportaLog()" style="width:100%;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:14px;padding:10px;color:var(--muted);font-family:var(--font);font-size:12px;font-weight:900;cursor:pointer">⬇️ Esporta log .txt</button>
-  </div>
 
   <nav id="nav-right">
     <button class="nav-btn active" onclick="switchTab('home',this)"><span class="nav-icon">🦥</span><span class="nav-label">Bradipo</span></button>
@@ -1576,6 +1572,19 @@ function apriFormEvento(data){
   apriModal('modal-evento');
 }
 
+function fasciaOraria(testo){
+  var t = testo.toLowerCase();
+  if(/\d{1,2}[:.]\d{2}/.test(t)) return null; // orario esplicito presente
+  if(t.includes('colazione')) return {i:'07:00',f:'09:00'};
+  if(t.includes('mattina')) return {i:'08:00',f:'13:00'};
+  if(t.includes('pranzo')) return {i:'12:00',f:'14:00'};
+  if(t.includes('pomeriggio')) return {i:'15:00',f:'19:00'};
+  if(t.includes('cena')) return {i:'19:00',f:'22:00'};
+  if(t.includes('sera')) return {i:'19:00',f:'23:00'};
+  if(t.includes('notte')) return {i:'23:00',f:'01:00'};
+  return null;
+}
+
 async function salvaEvento(){
   var titolo = document.getElementById('ev-titolo').value;
   var data = document.getElementById('ev-data').value;
@@ -1583,6 +1592,11 @@ async function salvaEvento(){
   var fine = document.getElementById('ev-fine').value;
   var tipo = document.getElementById('ev-tipo').value;
   if(!titolo || !data){ alert('Inserisci titolo e data!'); return; }
+  // Applica fascia oraria se orario non specificato
+  if(!inizio){
+    var fascia = fasciaOraria(titolo);
+    if(fascia){ inizio = fascia.i; fine = fascia.f; }
+  }
   try{
     var token = await getToken();
     if(!token){ mostraBolla('Login Google necessario 😔','#FF6B6B'); return; }
