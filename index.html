@@ -131,7 +131,7 @@ body{font-family:var(--font);background:linear-gradient(160deg,var(--bg1) 0%,var
 <div class="page" id="page-app">
   <div id="app-content">
     <div class="app-header">
-      <div class="header-logo"><span style="font-size:22px">🦥</span><span>Famiglia Bradipi <span onclick="toggleDebug()" style="font-size:10px;opacity:.4;cursor:pointer;padding:4px">v25</span></span></div>
+      <div class="header-logo"><span style="font-size:22px">🦥</span><span>Famiglia Bradipi <span onclick="toggleDebug()" style="font-size:10px;opacity:.4;cursor:pointer;padding:4px">v26</span></span></div>
       <div class="header-badge ale" id="hdr-badge" onclick="logout()">👦 Ale</div>
     </div>
 
@@ -437,7 +437,7 @@ body{font-family:var(--font);background:linear-gradient(160deg,var(--bg1) 0%,var
   </div>
 
   <!-- TAB SEGNALAZIONI -->
-  <div class="tab" id="tab-segnalazioni">
+  <div class="tab" id="tab-segnalazioni" style="padding:20px">
     <div style="font-size:18px;font-weight:900;color:#fff;margin-bottom:16px;flex-shrink:0">⚠️ Segnalazioni</div>
 
     <!-- COMANDI NON CAPITI -->
@@ -1295,17 +1295,22 @@ function tipoToColorId(tipo){
 
 async function caricaEventi(){
   try{
-    const token = await getToken();
+    var token = await getToken();
     if(!token) return;
-    const ora = new Date().toISOString();
-    const tra60 = new Date(Date.now() + 60*24*60*60*1000).toISOString();
-    const r = await fetch('https://www.googleapis.com/calendar/v3/calendars/'+CAL_ID+'/events?timeMin='+ora+'&timeMax='+tra60+'&orderBy=startTime&singleEvents=true&maxResults=30',{
+    var ora = new Date().toISOString();
+    var tra60 = new Date(Date.now() + 60*24*60*60*1000).toISOString();
+    var r = await fetch('https://www.googleapis.com/calendar/v3/calendars/'+CAL_ID+'/events?timeMin='+ora+'&timeMax='+tra60+'&orderBy=startTime&singleEvents=true&maxResults=50',{
       headers:{'Authorization':'Bearer '+token}
     });
-    const d = await r.json();
+    var d = await r.json();
     eventiCache = d.items || [];
     renderCalendario();
-  }catch(e){ console.log('Errore eventi', e); }
+    // Se agenda aperta aggiorna anche quella
+    var panel = document.getElementById('agenda-panel');
+    if(panel && panel.style.display !== 'none' && calGiornoSel){
+      selGiorno(calGiornoSel);
+    }
+  }catch(e){ console.log('Errore eventi', e); logErrore('caricaEventi: '+e.message); }
 }
 
 function calMese(delta){
@@ -1641,9 +1646,8 @@ async function aggiornaEvento(){
       body:JSON.stringify({summary:titolo,start:start,end:end})
     });
     chiudiModal('modal-mod-ev');
-    await caricaEventi();
-    if(calGiornoSel) selGiorno(calGiornoSel);
     mostraBolla(rispOk());
+    await caricaEventi();
   }catch(e){ mostraBolla('Errore aggiornamento 😔','#FF6B6B'); }
 }
 
@@ -1655,8 +1659,8 @@ async function elimEv(id){
       method:'DELETE',
       headers:{'Authorization':'Bearer '+token}
     });
-    caricaEventi();
     mostraBolla(rispOk());
+    await caricaEventi();
   }catch(e){ mostraBolla('Errore eliminazione 😔','#FF6B6B'); }
 }
 
