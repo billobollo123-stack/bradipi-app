@@ -20,6 +20,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Create .well-known folder and copy assetlinks
+        run: |
+          mkdir -p .well-known
+          cp assetlinks.json .well-known/assetlinks.json
+          echo "✅ Fatto"
+
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
@@ -29,15 +35,15 @@ jobs:
           source: ./
           destination: ./_site
 
-      - name: Copy assetlinks.json to .well-known
+      - name: Verify assetlinks in site
         run: |
-          mkdir -p ./_site/.well-known
-          cp ./assetlinks.json ./_site/.well-known/assetlinks.json
-          echo "✅ assetlinks.json copiato in .well-known"
-          cat ./_site/.well-known/assetlinks.json
+          ls -la ./_site/.well-known/ || echo "Cartella non trovata"
+          cat ./_site/.well-known/assetlinks.json || echo "File non trovato"
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./_site
 
   deploy:
     environment:
