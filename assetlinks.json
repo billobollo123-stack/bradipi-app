@@ -1,0 +1,10 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "io.github.billobollo123_stack.twa",
+    "sha256_cert_fingerprints": [
+      "1F:4D:1E:77:A6:D6:8B:3C:95:EC:B0:38:B9:3D:59:60:B1:84:75:A5:A6:23:C3:12:92:E1:E9:6B:54:8A:0D:57"
+    ]
+  }
+}]
